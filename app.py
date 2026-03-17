@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import datetime # 日時を取得するためのツールを追加
 
 st.title("バーコード照合アプリ")
 
@@ -8,14 +9,17 @@ if 'reference_code' not in st.session_state:
     st.session_state.reference_code = ""
 if 'scanned_count' not in st.session_state:
     st.session_state.scanned_count = 0
-if 'last_scan_ng' not in st.session_state: # ストップではなく「直前がNGだったか」を記録するフラグ
+if 'last_scan_ng' not in st.session_state:
     st.session_state.last_scan_ng = False
-if 'ng_text' not in st.session_state: # 間違えて読み込んだ文字を記録
+if 'ng_text' not in st.session_state:
     st.session_state.ng_text = ""
 if 'play_voice' not in st.session_state:
     st.session_state.play_voice = False
 if 'scan_input' not in st.session_state:
     st.session_state.scan_input = ""
+# ★追加：NGの履歴を保存するリスト
+if 'ng_logs' not in st.session_state:
+    st.session_state.ng_logs = []
 
 # 2. 女性の声（自動音声）の仕組み
 def play_error_voice():
@@ -49,13 +53,21 @@ def process_scan():
     # B. 照合先を読み込んだ場合
     if scanned_text == st.session_state.reference_code:
         st.session_state.scanned_count += 1
-        st.session_state.last_scan_ng = False # 成功したらNG状態をリセット
+        st.session_state.last_scan_ng = False
     else:
-        st.session_state.last_scan_ng = True  # NG状態にする（※ストップはしない）
+        st.session_state.last_scan_ng = True
         st.session_state.play_voice = True
-        st.session_state.ng_text = scanned_text # 何を間違えて読み込んだか記録しておく
+        st.session_state.ng_text = scanned_text
         
-    st.session_state.scan_input = "" # 次の読み込みのために空に戻す
+        # ★追加：NGのログを作成してリストに追加
+        now = datetime.datetime.now()
+        # 日本時間に合わせる（サーバーの時間がずれていることがあるため+9時間）
+        jst_now = now + datetime.timedelta(hours=9) 
+        time_str = jst_now.strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{time_str}] 参照先: {st.session_state.reference_code} / 誤読込: {scanned_text}"
+        st.session_state.ng_logs.append(log_entry)
+        
+    st.session_state.scan_input = ""
 
 # 4. 画面の表示部分
 max_count = st.number_input("照合する個数を設定してください（最大30）", min_value=1, max_value=30, value=5)
@@ -64,7 +76,7 @@ st.write("---")
 # 目標達成した場合
 if st.session_state.reference_code and st.session_state.scanned_count >= max_count:
     st.success("✨ 目標個数の照合がすべて完了しました！")
-    if st.button("すべてリセットして最初から"):
+    if st.button("リセットして次へ"):
         st.session_state.reference_code = ""
         st.session_state.scanned_count = 0
         st.session_state.last_scan_ng = False
@@ -79,23 +91,23 @@ else:
         st.success(f"🎯 参照先: 【 {st.session_state.reference_code} 】")
         st.write(f"**現在の目標:** {st.session_state.scanned_count} / {max_count} 個完了")
         
-        # ★追加：NGだった場合の警告表示（ストップせず、再入力を促す）
+        # NGだった場合の警告表示
         if st.session_state.last_scan_ng:
             st.error(f"❌ NG! 一致しませんでした。（読込: {st.session_state.ng_text}）\n\nもう一度、正しいバーコードを読み込んでください。")
             if st.session_state.play_voice:
                 play_error_voice()
-                st.session_state.play_voice = False # 1回だけ喋らせる
+                st.session_state.play_voice = False
         else:
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
 
-    # 入力欄（NGのときも常に表示し続けることで、すぐ再読み込み可能にする）
+    # 入力欄
     st.text_input(
         "▼ ここにカーソルがある状態で読み込んでください", 
         key="scan_input", 
         on_change=process_scan
     )
     
-    # 強力な自動フォーカス機能（カーソルを維持）
+    # 強力な自動フォーカス機能
     components.html(
         """
         <script>
@@ -120,12 +132,36 @@ else:
         """,
         height=0,
     )
+
+# --- ログの表示とダウンロード機能 ---
+st.write("---")
+st.write("### 📋 NGログ（記録）")
+
+# ログがある場合だけダウンロードボタンを表示
+if st.session_state.ng_logs:
+    # リストになっているログを改行でつないで1つのテキストにする
+    log_text = "\n".join(st.session_state.ng_logs)
     
-    # 途中リセットボタン
-    st.write("---")
-    if st.button("リセットして最初から"):
-        st.session_state.reference_code = ""
-        st.session_state.scanned_count = 0
-        st.session_state.last_scan_ng = False
-        st.session_state.play_voice = False
-        st.rerun()
+    # ダウンロードボタン
+    st.download_button(
+        label="📥 NGログをテキストでダウンロード",
+        data=log_text,
+        file_name="NG_log.txt",
+        mime="text/plain"
+    )
+    
+    # 画面上でも最近のログを少し見えるようにする
+    with st.expander("ログの中身を見る"):
+        st.text(log_text)
+else:
+    st.write("現在、NGの記録はありません。")
+
+# 強制リセットボタン
+st.write("---")
+if st.button("すべて初期化（※ログも消えます）"):
+    st.session_state.reference_code = ""
+    st.session_state.scanned_count = 0
+    st.session_state.last_scan_ng = False
+    st.session_state.play_voice = False
+    st.session_state.ng_logs = [] # ログも消去
+    st.rerun()
