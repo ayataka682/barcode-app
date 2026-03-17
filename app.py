@@ -14,7 +14,6 @@ if 'last_scan_ng' not in st.session_state:
     st.session_state.last_scan_ng = False
 if 'ng_text' not in st.session_state:
     st.session_state.ng_text = ""
-# ★追加：OKだった時の状態を記録する準備
 if 'last_scan_ok' not in st.session_state:
     st.session_state.last_scan_ok = False
 if 'ok_text' not in st.session_state:
@@ -25,8 +24,14 @@ if 'scan_input' not in st.session_state:
     st.session_state.scan_input = ""
 if 'scan_history' not in st.session_state:
     st.session_state.scan_history = []
+# ★追加：「このサイクル中にNGがあったか」を記憶するフラグ
+if 'cycle_has_ng' not in st.session_state:
+    st.session_state.cycle_has_ng = False
+# ★追加：完了時の警告音を1回だけ鳴らすためのフラグ
+if 'play_completion_warning' not in st.session_state:
+    st.session_state.play_completion_warning = False
 
-# リセット時に「OKの履歴」だけを消して「NG」を残す関数
+# リセット時に状態を綺麗にする関数
 def reset_cycle():
     st.session_state.scan_history = [log for log in st.session_state.scan_history if log["判定"] == "❌ NG"]
     st.session_state.reference_code = ""
@@ -34,8 +39,10 @@ def reset_cycle():
     st.session_state.last_scan_ng = False
     st.session_state.last_scan_ok = False
     st.session_state.play_voice = False
+    st.session_state.cycle_has_ng = False # NG記憶もリセット
+    st.session_state.play_completion_warning = False
 
-# 2. 女性の声（自動音声）
+# 2. 自動音声の仕組み
 def play_error_voice():
     components.html(
         """
@@ -49,7 +56,22 @@ def play_error_voice():
         """, height=0
     )
 
+def play_completion_warning_voice():
+    components.html(
+        """
+        <script>
+        var msg = new SpeechSynthesisUtterance("作業中にエラーがありました。履歴を確認してください。");
+        msg.lang = "ja-JP";
+        msg.pitch = 1.0;  /* 少し低めの声で深刻に */
+        msg.rate = 1.1;
+        window.speechSynthesis.speak(msg);
+        </script>
+        """, height=0
+    )
+
 # 3. 読み込まれた瞬間に動く自動処理
+max_count = st.number_input("照合する個数を設定してください（最大30）", min_value=1, max_value=30, value=5)
+
 def process_scan():
     scanned_text = st.session_state.scan_input
     if not scanned_text:
@@ -59,7 +81,6 @@ def process_scan():
     jst_now = now + datetime.timedelta(hours=9) 
     time_str = jst_now.strftime("%Y-%m-%d %H:%M:%S") 
 
-    # A. 参照先がまだ登録されていない場合
     if not st.session_state.reference_code:
         st.session_state.reference_code = scanned_text
         st.session_state.scan_input = ""
@@ -67,11 +88,9 @@ def process_scan():
         st.session_state.last_scan_ok = False
         return
 
-    # B. 照合先を読み込んだ場合
     if scanned_text == st.session_state.reference_code:
         st.session_state.scanned_count += 1
         st.session_state.last_scan_ng = False
-        # ★追加：OKだったことを記録し、表にも追加する
         st.session_state.last_scan_ok = True
         st.session_state.ok_text = scanned_text
         
@@ -81,11 +100,17 @@ def process_scan():
             "読込内容": scanned_text,
             "時刻": time_str
         })
+        
+        # ★追加：もし目標達成して、かつNG履歴があったら警告音の準備をする
+        if st.session_state.scanned_count >= max_count and st.session_state.cycle_has_ng:
+            st.session_state.play_completion_warning = True
+
     else:
         st.session_state.last_scan_ng = True
         st.session_state.last_scan_ok = False
         st.session_state.play_voice = True
         st.session_state.ng_text = scanned_text
+        st.session_state.cycle_has_ng = True # ★追加：このサイクルでNGが出たことを記憶！
         
         st.session_state.scan_history.insert(0, {
             "判定": "❌ NG", 
@@ -97,7 +122,6 @@ def process_scan():
     st.session_state.scan_input = ""
 
 # 4. 画面の表示部分
-max_count = st.number_input("照合する個数を設定してください（最大30）", min_value=1, max_value=30, value=5)
 st.write("---")
 
 if st.session_state.reference_code:
@@ -110,29 +134,53 @@ if st.session_state.reference_code:
         """, unsafe_allow_html=True
     )
 
-# 目標達成した場合
+# --- 目標達成した場合の特大表示 ---
 if st.session_state.reference_code and st.session_state.scanned_count >= max_count:
-    st.success("✨ 目標個数の照合がすべて完了しました！")
-    # ★変更：このボタンを押すと、OKの履歴だけが消えます
-    if st.button("リセットして次へ", type="primary"):
+    
+    # パターンA：途中でNGがあった場合（要確認）
+    if st.session_state.cycle_has_ng:
+        st.markdown(
+            """
+            <div style="background-color:#fff3cd; border:4px solid #ffc107; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
+                <p style="margin:0; font-size:40px; font-weight:bold; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
+                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。下の表から履歴を確認してください。</p>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        # 警告音を1回だけ鳴らす
+        if st.session_state.play_completion_warning:
+            play_completion_warning_voice()
+            st.session_state.play_completion_warning = False
+
+    # パターンB：ノーミスだった場合（完全一致）
+    else:
+        st.markdown(
+            """
+            <div style="background-color:#d4edda; border:4px solid #28a745; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
+                <p style="margin:0; font-size:40px; font-weight:bold; color:#155724;">✨ 照合完了（完全一致） ✨</p>
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+    if st.button("リセットして次へ", type="primary", use_container_width=True):
         reset_cycle()
         st.rerun()
 
-# 通常の読み込み待ち状態の場合
+# --- 通常の読み込み待ち状態の場合 ---
 else:
     if not st.session_state.reference_code:
         st.info("💡 【1】最初のバーコード（参照先）を読み込んでください")
     else:
         st.write(f"**現在の目標:** {st.session_state.scanned_count} / {max_count} 個完了")
         
-        # NGだった場合の警告表示
+        # 直前がNGだった場合
         if st.session_state.last_scan_ng:
             st.error(f"❌ NG! 一致しませんでした。（読込: {st.session_state.ng_text}）\n\nもう一度、正しいバーコードを読み込んでください。")
             if st.session_state.play_voice:
                 play_error_voice()
                 st.session_state.play_voice = False
                 
-        # ★追加：OKだった場合の成功メッセージ
+        # 直前がOKだった場合
         elif st.session_state.last_scan_ok:
             st.success(f"⭕ OK! 一致しました。（読込: {st.session_state.ok_text}）")
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
@@ -168,7 +216,7 @@ else:
         """, height=0
     )
 
-# --- ★変更：照合履歴の表示 ---
+# --- 照合履歴の表示 ---
 if st.session_state.scan_history:
     st.write("---")
     st.write("### 📋 照合履歴（最新が一番上）")
@@ -176,7 +224,6 @@ if st.session_state.scan_history:
     df_history = pd.DataFrame(st.session_state.scan_history)
     st.dataframe(df_history, use_container_width=True)
     
-    # ★変更：ダウンロード用データは「NGのみ」に自動で絞り込む
     df_ng_only = df_history[df_history["判定"] == "❌ NG"]
     if not df_ng_only.empty:
         csv = df_ng_only.to_csv(index=False).encode('utf-8-sig') 
@@ -187,9 +234,8 @@ if st.session_state.scan_history:
             mime="text/csv",
         )
 
-# 強制リセットボタン
+# --- 強制リセットボタン ---
 st.write("---")
-# 途中で参照先を変えたい時用に「NGを残すリセット」と「完全消去」の2つを用意しました
 col1, col2 = st.columns(2)
 with col1:
     if st.button("途中でリセット（※OK履歴のみ消去）"):
@@ -202,5 +248,7 @@ with col2:
         st.session_state.last_scan_ng = False
         st.session_state.last_scan_ok = False
         st.session_state.play_voice = False
+        st.session_state.cycle_has_ng = False
+        st.session_state.play_completion_warning = False
         st.session_state.scan_history = [] 
         st.rerun()
