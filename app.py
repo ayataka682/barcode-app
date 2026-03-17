@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import datetime
-import pandas as pd # 表を扱うためのツールを追加
+import pandas as pd
 
 st.title("バーコード照合アプリ")
 
@@ -18,7 +18,7 @@ if 'play_voice' not in st.session_state:
     st.session_state.play_voice = False
 if 'scan_input' not in st.session_state:
     st.session_state.scan_input = ""
-# ★追加：すべての照合履歴を保存するリスト（表のデータになります）
+# ★変更：NGの履歴のみを保存するリスト
 if 'scan_history' not in st.session_state:
     st.session_state.scan_history = []
 
@@ -46,7 +46,8 @@ def process_scan():
 
     now = datetime.datetime.now()
     jst_now = now + datetime.timedelta(hours=9) 
-    time_str = jst_now.strftime("%H:%M:%S")
+    # 日付もわかるようにフォーマットを変更
+    time_str = jst_now.strftime("%Y-%m-%d %H:%M:%S") 
 
     # A. 参照先がまだ登録されていない場合
     if not st.session_state.reference_code:
@@ -57,16 +58,21 @@ def process_scan():
 
     # B. 照合先を読み込んだ場合
     if scanned_text == st.session_state.reference_code:
+        # ★変更：OKの場合はカウントを増やすだけで、履歴には追加しない
         st.session_state.scanned_count += 1
         st.session_state.last_scan_ng = False
-        # ★追加：OKの履歴を一番上に追加
-        st.session_state.scan_history.insert(0, {"判定": "⭕ OK", "読み込んだバーコード": scanned_text, "時刻": time_str})
     else:
+        # ★変更：NGの場合のみ、履歴（表）の一番上に追加する
         st.session_state.last_scan_ng = True
         st.session_state.play_voice = True
         st.session_state.ng_text = scanned_text
-        # ★追加：NGの履歴を一番上に追加
-        st.session_state.scan_history.insert(0, {"判定": "❌ NG", "読み込んだバーコード": scanned_text, "時刻": time_str})
+        
+        st.session_state.scan_history.insert(0, {
+            "判定": "❌ NG", 
+            "参照先": st.session_state.reference_code, # 何を基準にしていたか
+            "誤読込": scanned_text,                    # 何を間違えて読んだか
+            "時刻": time_str
+        })
         
     st.session_state.scan_input = ""
 
@@ -74,7 +80,7 @@ def process_scan():
 max_count = st.number_input("照合する個数を設定してください（最大30）", min_value=1, max_value=30, value=5)
 st.write("---")
 
-# 参照先が登録されている場合、★超目立つように表示するデザインパネル
+# 参照先が登録されている場合、超目立つように表示するデザインパネル
 if st.session_state.reference_code:
     st.markdown(
         f"""
@@ -145,10 +151,10 @@ else:
         height=0,
     )
 
-# --- ★追加：照合結果の「表」の表示 ---
+# --- ★変更：NG履歴の表表示 ---
 if st.session_state.scan_history:
     st.write("---")
-    st.write("### 📋 照合履歴（最新が一番上）")
+    st.write("### 🚨 NG発生履歴（最新が一番上）")
     
     # リストを表（データフレーム）に変換
     df_history = pd.DataFrame(st.session_state.scan_history)
@@ -157,17 +163,17 @@ if st.session_state.scan_history:
     st.dataframe(df_history, use_container_width=True)
     
     # 表のデータをCSV（Excelで開ける形式）に変換してダウンロードボタンを用意
-    csv = df_history.to_csv(index=False).encode('utf-8-sig') # utf-8-sigでExcelの文字化け防止
+    csv = df_history.to_csv(index=False).encode('utf-8-sig') 
     st.download_button(
-        label="📥 履歴をCSV（Excel用）でダウンロード",
+        label="📥 NG履歴をCSV（Excel用）でダウンロード",
         data=csv,
-        file_name="scan_history.csv",
+        file_name="ng_history.csv",
         mime="text/csv",
     )
 
 # 強制リセットボタン
 st.write("---")
-if st.button("すべて初期化（※履歴も消えます）"):
+if st.button("すべて初期化（※NG履歴も消えます）"):
     st.session_state.reference_code = ""
     st.session_state.scanned_count = 0
     st.session_state.last_scan_ng = False
