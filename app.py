@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import datetime
 import pandas as pd
+import time # ★追加：毎回違う指示にするための時間ツール
 
 st.title("バーコード照合アプリ")
 
@@ -24,10 +25,8 @@ if 'scan_input' not in st.session_state:
     st.session_state.scan_input = ""
 if 'scan_history' not in st.session_state:
     st.session_state.scan_history = []
-# ★追加：「このサイクル中にNGがあったか」を記憶するフラグ
 if 'cycle_has_ng' not in st.session_state:
     st.session_state.cycle_has_ng = False
-# ★追加：完了時の警告音を1回だけ鳴らすためのフラグ
 if 'play_completion_warning' not in st.session_state:
     st.session_state.play_completion_warning = False
 
@@ -39,14 +38,16 @@ def reset_cycle():
     st.session_state.last_scan_ng = False
     st.session_state.last_scan_ok = False
     st.session_state.play_voice = False
-    st.session_state.cycle_has_ng = False # NG記憶もリセット
+    st.session_state.cycle_has_ng = False 
     st.session_state.play_completion_warning = False
 
-# 2. 自動音声の仕組み
+# 2. 自動音声の仕組み（★修正：毎回必ず鳴るようにタイムスタンプを埋め込む）
 def play_error_voice():
+    # f""" """ にすることで中に変数を入れられるように変更
     components.html(
-        """
+        f"""
         <script>
+        // ダミーのタイムスタンプを入れて毎回違うHTMLだと認識させる: {time.time()}
         var msg = new SpeechSynthesisUtterance("間違ってるよ！");
         msg.lang = "ja-JP";
         msg.pitch = 1.6;
@@ -58,11 +59,12 @@ def play_error_voice():
 
 def play_completion_warning_voice():
     components.html(
-        """
+        f"""
         <script>
+        // ダミーのタイムスタンプ: {time.time()}
         var msg = new SpeechSynthesisUtterance("作業中にエラーがありました。履歴を確認してください。");
         msg.lang = "ja-JP";
-        msg.pitch = 1.0;  /* 少し低めの声で深刻に */
+        msg.pitch = 1.0;  
         msg.rate = 1.1;
         window.speechSynthesis.speak(msg);
         </script>
@@ -101,7 +103,6 @@ def process_scan():
             "時刻": time_str
         })
         
-        # ★追加：もし目標達成して、かつNG履歴があったら警告音の準備をする
         if st.session_state.scanned_count >= max_count and st.session_state.cycle_has_ng:
             st.session_state.play_completion_warning = True
 
@@ -110,7 +111,7 @@ def process_scan():
         st.session_state.last_scan_ok = False
         st.session_state.play_voice = True
         st.session_state.ng_text = scanned_text
-        st.session_state.cycle_has_ng = True # ★追加：このサイクルでNGが出たことを記憶！
+        st.session_state.cycle_has_ng = True 
         
         st.session_state.scan_history.insert(0, {
             "判定": "❌ NG", 
@@ -137,7 +138,7 @@ if st.session_state.reference_code:
 # --- 目標達成した場合の特大表示 ---
 if st.session_state.reference_code and st.session_state.scanned_count >= max_count:
     
-    # パターンA：途中でNGがあった場合（要確認）
+    # パターンA：途中でNGがあった場合
     if st.session_state.cycle_has_ng:
         st.markdown(
             """
@@ -147,12 +148,11 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
             </div>
             """, unsafe_allow_html=True
         )
-        # 警告音を1回だけ鳴らす
         if st.session_state.play_completion_warning:
             play_completion_warning_voice()
             st.session_state.play_completion_warning = False
 
-    # パターンB：ノーミスだった場合（完全一致）
+    # パターンB：ノーミスだった場合
     else:
         st.markdown(
             """
