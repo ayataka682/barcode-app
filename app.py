@@ -2,7 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 import datetime
 import pandas as pd
-import time # ★追加：毎回違う指示にするための時間ツール
+import time
+import base64 # ★追加：音声ファイルをデータに変換するためのツール
+import os     # ★追加：ファイルがあるか確認するためのツール
 
 st.title("バーコード照合アプリ")
 
@@ -41,27 +43,37 @@ def reset_cycle():
     st.session_state.cycle_has_ng = False 
     st.session_state.play_completion_warning = False
 
-# 2. 自動音声の仕組み（★修正：毎回必ず鳴るようにタイムスタンプを埋め込む）
-def play_error_voice():
-    # f""" """ にすることで中に変数を入れられるように変更
+# 2. 【大幅変更】アップロードされたWAVファイルを読み込んで再生する仕組み
+def play_error_wav_file():
+    # GitHub上にアップロードされた音声ファイル名
+    WAV_FILE = "ng_voice.wav"
+    
+    # ファイルが存在するか確認（エラー対策）
+    if not os.path.exists(WAV_FILE):
+        st.error(f"音声ファイル {WAV_FILE} がGitHubに見つかりません。アップロードを確認してください。")
+        return
+
+    # Pythonでファイルを読み込み、テキストデータ（Base64）に変換
+    with open(WAV_FILE, "rb") as f:
+        audio_bytes = f.read()
+    encoded_audio = base64.b64encode(audio_bytes).decode()
+    
+    # HTMLのオーディオタグを埋め込む（Base64データを直接流し込む）
+    # autoplay: 自動再生, timestamp: 連続再生対策
     components.html(
         f"""
-        <script>
-        // ダミーのタイムスタンプを入れて毎回違うHTMLだと認識させる: {time.time()}
-        var msg = new SpeechSynthesisUtterance("間違ってるよ！");
-        msg.lang = "ja-JP";
-        msg.pitch = 1.6;
-        msg.rate = 1.2;
-        window.speechSynthesis.speak(msg);
-        </script>
+        <audio autoplay="autoplay" style="display:none;" timestamp="{time.time()}">
+            <source src="data:audio/wav;base64,{encoded_audio}" type="audio/wav">
+            Your browser does not support the audio element.
+        </audio>
         """, height=0
     )
 
+# （完了時の音声は今回はそのままにしています。もしモノマネなら同様に修正可能です）
 def play_completion_warning_voice():
     components.html(
         f"""
         <script>
-        // ダミーのタイムスタンプ: {time.time()}
         var msg = new SpeechSynthesisUtterance("作業中にエラーがありました。履歴を確認してください。");
         msg.lang = "ja-JP";
         msg.pitch = 1.0;  
@@ -177,7 +189,8 @@ else:
         if st.session_state.last_scan_ng:
             st.error(f"❌ NG! 一致しませんでした。（読込: {st.session_state.ng_text}）\n\nもう一度、正しいバーコードを読み込んでください。")
             if st.session_state.play_voice:
-                play_error_voice()
+                # ★ここを変更：新しいWAV再生関数を呼び出す
+                play_error_wav_file()
                 st.session_state.play_voice = False
                 
         # 直前がOKだった場合
