@@ -8,7 +8,7 @@ import os
 
 st.title("バーコード照合アプリ")
 
-# --- ★変更：いただいた実データ（A3〜A42, B3〜B42）を登録 ---
+# いただいた実データ
 master_data = {
     "0201": "Ａ",
     "0202": "Ｂ",
@@ -89,7 +89,7 @@ def reset_cycle():
 
 # 2. 音声ファイルを読み込んで再生する仕組み
 def play_error_wav_file():
-    WAV_FILE = "ng_voice.wav.wav"
+    WAV_FILE = "ng_voice.wav"
     if not os.path.exists(WAV_FILE):
         st.error(f"音声ファイル {WAV_FILE} が見つかりません。")
         return
@@ -139,19 +139,21 @@ def process_scan():
         st.session_state.last_scan_ok = False
         return
 
+    # ★変更：読み込んだバーコードのマーク名も取得する
+    ref_mark_name = master_data.get(st.session_state.reference_code, "（登録なし）")
+    scanned_mark_name = master_data.get(scanned_text, "（登録なし）")
+
     if scanned_text == st.session_state.reference_code:
         st.session_state.scanned_count += 1
         st.session_state.last_scan_ng = False
         st.session_state.last_scan_ok = True
         st.session_state.ok_text = scanned_text
         
-        # 履歴にもマーク名を入れると後でわかりやすいため、変換して登録します
-        mark_name = master_data.get(st.session_state.reference_code, "（登録なし）")
-        
+        # 履歴に両方のマーク名を入れる
         st.session_state.scan_history.insert(0, {
             "判定": "⭕ OK", 
-            "参照先": f"{st.session_state.reference_code} ({mark_name})",
-            "読込内容": scanned_text,
+            "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
+            "読込内容": f"{scanned_text} ({scanned_mark_name})", # ★ここを変更！
             "時刻": time_str
         })
         
@@ -165,12 +167,11 @@ def process_scan():
         st.session_state.ng_text = scanned_text
         st.session_state.cycle_has_ng = True 
         
-        mark_name = master_data.get(st.session_state.reference_code, "（登録なし）")
-        
+        # 履歴に両方のマーク名を入れる
         st.session_state.scan_history.insert(0, {
             "判定": "❌ NG", 
-            "参照先": f"{st.session_state.reference_code} ({mark_name})",
-            "読込内容": scanned_text,
+            "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
+            "読込内容": f"{scanned_text} ({scanned_mark_name})", # ★ここを変更！
             "時刻": time_str
         })
         
@@ -199,7 +200,7 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
             """
             <div style="background-color:#fff3cd; border:4px solid #ffc107; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
                 <p style="margin:0; font-size:40px; font-weight:bold; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
-                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
+                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。下の表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
