@@ -44,7 +44,7 @@ def reset_cycle():
     st.session_state.play_completion_warning = False
 
 # 2. 音声ファイルを読み込んで再生する仕組み
-# ① NG用の音声（ng_voice.wav）
+# ① NG用の音声（ng_voice.wav.wav）
 def play_error_wav_file():
     WAV_FILE = "ng_voice.wav"
     if not os.path.exists(WAV_FILE):
