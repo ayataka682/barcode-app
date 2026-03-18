@@ -8,6 +8,50 @@ import os
 
 st.title("バーコード照合アプリ")
 
+# --- ★変更：いただいた実データ（A3〜A42, B3〜B42）を登録 ---
+master_data = {
+    "0201": "Ａ",
+    "0202": "Ｂ",
+    "0203": "蝶",
+    "0204": "チューリップ",
+    "0205": "鉛筆",
+    "0206": "クジラ",
+    "0207": "飛行機",
+    "0208": "リ",
+    "0209": "足跡",
+    "0210": "＃",
+    "0211": "★",
+    "0212": "３３３",
+    "0213": "トンボ",
+    "0214": "魚",
+    "0215": "ウサギ",
+    "0216": "電話",
+    "0217": "ハサミ",
+    "0218": "サッカーボール",
+    "0219": "チョキ",
+    "0220": "ピストル",
+    "0221": "音符",
+    "0222": "ペンギン",
+    "0223": "セミ",
+    "0224": "車",
+    "0225": "かたつむり",
+    "0226": "テルテル坊主",
+    "0227": "ハート",
+    "0228": "牛",
+    "0229": "かさ",
+    "0230": "（二重丸）",
+    "0231": "日の丸（ハタ）",
+    "0232": "ト音記号",
+    "0233": "温泉",
+    "0234": "へび",
+    "0235": "バナナ",
+    "0236": "〒（郵便マーク）",
+    "0237": "ヘリコプター",
+    "0238": "新幹線",
+    "0239": "家",
+    "0240": "自転車"
+}
+
 # 1. 初期状態の準備
 if 'reference_code' not in st.session_state:
     st.session_state.reference_code = ""
@@ -44,9 +88,8 @@ def reset_cycle():
     st.session_state.play_completion_warning = False
 
 # 2. 音声ファイルを読み込んで再生する仕組み
-# ① NG用の音声（ng_voice.wav.wav）
 def play_error_wav_file():
-    WAV_FILE = "ng_voice.wav.wav"
+    WAV_FILE = "ng_voice.wav"
     if not os.path.exists(WAV_FILE):
         st.error(f"音声ファイル {WAV_FILE} が見つかりません。")
         return
@@ -61,9 +104,8 @@ def play_error_wav_file():
         """, height=0
     )
 
-# ② 【変更】完了時の警告用の音声（warning_voice.wav）
 def play_completion_warning_wav_file():
-    WAV_FILE = "warning_voice.wav" # ここで新しいファイルを指定
+    WAV_FILE = "warning_voice.wav" 
     if not os.path.exists(WAV_FILE):
         st.error(f"音声ファイル {WAV_FILE} が見つかりません。")
         return
@@ -103,9 +145,12 @@ def process_scan():
         st.session_state.last_scan_ok = True
         st.session_state.ok_text = scanned_text
         
+        # 履歴にもマーク名を入れると後でわかりやすいため、変換して登録します
+        mark_name = master_data.get(st.session_state.reference_code, "（登録なし）")
+        
         st.session_state.scan_history.insert(0, {
             "判定": "⭕ OK", 
-            "参照先": st.session_state.reference_code,
+            "参照先": f"{st.session_state.reference_code} ({mark_name})",
             "読込内容": scanned_text,
             "時刻": time_str
         })
@@ -120,9 +165,11 @@ def process_scan():
         st.session_state.ng_text = scanned_text
         st.session_state.cycle_has_ng = True 
         
+        mark_name = master_data.get(st.session_state.reference_code, "（登録なし）")
+        
         st.session_state.scan_history.insert(0, {
             "判定": "❌ NG", 
-            "参照先": st.session_state.reference_code,
+            "参照先": f"{st.session_state.reference_code} ({mark_name})",
             "読込内容": scanned_text,
             "時刻": time_str
         })
@@ -133,34 +180,32 @@ def process_scan():
 st.write("---")
 
 if st.session_state.reference_code:
+    mark_text = master_data.get(st.session_state.reference_code, "（登録なし）")
+
     st.markdown(
         f"""
         <div style="background-color:#e6f7ff; border:2px solid #1890ff; padding:20px; border-radius:10px; text-align:center; margin-bottom:20px;">
-            <p style="margin:0; font-size:18px; color:#0050b3; font-weight:bold;">🎯 現在の参照先バーコード</p>
+            <p style="margin:0; font-size:18px; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
             <p style="margin:0; font-size:48px; font-weight:bold; color:#002c8c; letter-spacing: 2px;">{st.session_state.reference_code}</p>
+            <p style="margin:15px 0 0 0; font-size:36px; font-weight:bold; color:#d9363e;">【 {mark_text} 】</p>
         </div>
         """, unsafe_allow_html=True
     )
 
 # --- 目標達成した場合の特大表示 ---
 if st.session_state.reference_code and st.session_state.scanned_count >= max_count:
-    
-    # パターンA：途中でNGがあった場合
     if st.session_state.cycle_has_ng:
         st.markdown(
             """
             <div style="background-color:#fff3cd; border:4px solid #ffc107; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
                 <p style="margin:0; font-size:40px; font-weight:bold; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
-                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。履歴を確認してください。</p>
+                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。下の表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
         if st.session_state.play_completion_warning:
-            # ★ここを変更：新しいWAV再生関数を呼び出す
             play_completion_warning_wav_file()
             st.session_state.play_completion_warning = False
-
-    # パターンB：ノーミスだった場合
     else:
         st.markdown(
             """
@@ -181,14 +226,12 @@ else:
     else:
         st.write(f"**現在の目標:** {st.session_state.scanned_count} / {max_count} 個完了")
         
-        # 直前がNGだった場合
         if st.session_state.last_scan_ng:
             st.error(f"❌ NG! 一致しませんでした。（読込: {st.session_state.ng_text}）\n\nもう一度、正しいバーコードを読み込んでください。")
             if st.session_state.play_voice:
                 play_error_wav_file()
                 st.session_state.play_voice = False
                 
-        # 直前がOKだった場合
         elif st.session_state.last_scan_ok:
             st.success(f"⭕ OK! 一致しました。（読込: {st.session_state.ok_text}）")
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
@@ -196,10 +239,8 @@ else:
         else:
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
 
-    # 入力欄
     st.text_input("▼ ここにカーソルがある状態で読み込んでください", key="scan_input", on_change=process_scan)
     
-    # 強力な自動フォーカス機能
     components.html(
         """
         <script>
