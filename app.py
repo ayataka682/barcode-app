@@ -89,7 +89,7 @@ def reset_cycle():
 
 # 2. 音声ファイルを読み込んで再生する仕組み
 def play_error_wav_file():
-    WAV_FILE = "ng_voice.wav"
+    WAV_FILE = "ng_voice.wav.wav"
     if not os.path.exists(WAV_FILE):
         st.error(f"音声ファイル {WAV_FILE} が見つかりません。")
         return
