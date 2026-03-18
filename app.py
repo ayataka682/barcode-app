@@ -151,7 +151,7 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
             """
             <div style="background-color:#fff3cd; border:4px solid #ffc107; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
                 <p style="margin:0; font-size:40px; font-weight:bold; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
-                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。下の表から履歴を確認してください。</p>
+                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
