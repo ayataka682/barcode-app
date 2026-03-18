@@ -46,7 +46,7 @@ def reset_cycle():
 # 2. 【大幅変更】アップロードされたWAVファイルを読み込んで再生する仕組み
 def play_error_wav_file():
     # GitHub上にアップロードされた音声ファイル名
-    WAV_FILE = "ng_voice.wav"
+    WAV_FILE = "ng_voice.wav.wav"
     
     # ファイルが存在するか確認（エラー対策）
     if not os.path.exists(WAV_FILE):
