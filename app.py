@@ -66,7 +66,7 @@ st.markdown("""<style>
     
     /* 入力部分の背景も同じ灰色にする */
     input[type="text"], input[type="number"] {
-        background-color: transparent !important;
+        background-color: #f0f2f6 !important;
         border: none !important;
     }
 
@@ -425,14 +425,13 @@ else:
             """, unsafe_allow_html=True)
 
     # ====================================================
-    # ★ 入力エリア ＆ ステップガイドの統合
+    # ★ 究極のズレ防止：ガイド文と入力BOXを行(row)で完全に分ける
     # ====================================================
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    # ★元の幅バランス [1, 3] に戻す
-    col_input1, col_input2 = st.columns([1, 3])
-    
-    with col_input1:
+    # 【上段】ガイド文のみの行
+    col_lbl1, col_lbl2 = st.columns([1, 3])
+    with col_lbl1:
         if needs_download:
             label_1 = "🔒 ロック中"
             color_1 = "#ff4b4b"
@@ -443,9 +442,25 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        # ★文字サイズを小さくし、改行禁止(nowrap)で絶対に1行に収める
-        st.markdown(f"<p style='font-size:18px !important; font-weight:bold; color:{color_1}; margin-bottom:5px; white-space: nowrap;'>{label_1}</p>", unsafe_allow_html=True)
+        # 文字は特大(26px)をキープ。2行になっても構わない設計。
+        st.markdown(f"<p style='font-size:26px !important; font-weight:bold; color:{color_1}; margin-bottom:5px;'>{label_1}</p>", unsafe_allow_html=True)
         
+    with col_lbl2:
+        if needs_download:
+            label_2 = "🔒 データをダウンロードするまで読み込みできません"
+            color_2 = "#ff4b4b"
+        elif not is_working:
+            label_2 = "🔰 STEP 2：最初のバーコード(基準)をスキャン ▼"
+            color_2 = "#0050b3"
+        else:
+            label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
+            color_2 = "#237804"
+            
+        st.markdown(f"<p style='font-size:26px !important; font-weight:bold; color:{color_2}; margin-bottom:5px;'>{label_2}</p>", unsafe_allow_html=True)
+
+    # 【下段】入力BOXのみの行（独立しているため絶対に高さがズレない）
+    col_inp1, col_inp2 = st.columns([1, 3])
+    with col_inp1:
         def update_target():
             st.session_state.target_count = st.session_state.target_count_widget
             
@@ -460,20 +475,7 @@ else:
             label_visibility="collapsed"
         )
         
-    with col_input2:
-        if needs_download:
-            label_2 = "🔒 データをダウンロードするまで読み込みできません"
-            color_2 = "#ff4b4b"
-        elif not is_working:
-            label_2 = "🔰 STEP 2：最初のバーコード(基準)をスキャン ▼"
-            color_2 = "#0050b3"
-        else:
-            label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
-            color_2 = "#237804"
-            
-        # ★右側も文字サイズを揃え、改行禁止(nowrap)にする
-        st.markdown(f"<p style='font-size:20px !important; font-weight:bold; color:{color_2}; margin-bottom:5px; white-space: nowrap;'>{label_2}</p>", unsafe_allow_html=True)
-        
+    with col_inp2:
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
     if not needs_download:
