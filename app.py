@@ -22,53 +22,89 @@ master_data = {
     "0237": "ヘリコプター", "0238": "新幹線", "0239": "家", "0240": "自転車"
 }
 
-# --- 13:00の自動出力処理 ---
-def auto_export_at_1300():
-    now = datetime.datetime.now()
-    jst_now = now + datetime.timedelta(hours=9)
-    
-    if jst_now.hour >= 13:
-        export_date_str = jst_now.strftime("%Y%m%d")
-        end_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
-    else:
-        export_date_str = (jst_now - datetime.timedelta(days=1)).strftime("%Y%m%d")
-        end_thresh = (jst_now - datetime.timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
-        
+# ====================================================
+# ★ 13時締めの時刻計算とダウンロード判定
+# ====================================================
+now = datetime.datetime.now()
+jst_now = now + datetime.timedelta(hours=9)
+
+# 13時を境界にターゲットとなる日付を決定
+if jst_now.hour >= 13:
+    start_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
+    end_thresh = start_thresh + datetime.timedelta(days=1)
+    target_date_str = jst_now.strftime("%Y%m%d") # 今日の13時締め
+else:
+    end_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
     start_thresh = end_thresh - datetime.timedelta(days=1)
+    target_date_str = (jst_now - datetime.timedelta(days=1)).strftime("%Y%m%d") # 昨日の13時締め
+
+# 最後にダウンロードした日付を記録するファイル
+status_file = "last_download_status.txt"
+last_download = ""
+if os.path.exists(status_file):
+    with open(status_file, "r", encoding="utf-8") as f:
+        last_download = f.read().strip()
+
+# ダウンロードが必要かどうかの判定（今日まだダウンロードしていなければTrue）
+needs_download = (last_download != target_date_str)
+
+# データの準備
+master_file = "scan_master_history.csv"
+has_daily_data = False
+csv_daily = b""
+
+if os.path.exists(master_file):
+    df_m = pd.read_csv(master_file, encoding="utf-8-sig")
+    df_m['時刻(DT)'] = pd.to_datetime(df_m['時刻'], errors='coerce')
+    # 前日13:00 〜 当日13:00 のデータのみ抽出
+    mask = (df_m['時刻(DT)'] > start_thresh) & (df_m['時刻(DT)'] <= end_thresh)
+    df_daily = df_m[mask].drop(columns=['時刻(DT)'])
     
-    status_file = "last_export_status.txt"
-    last_export = ""
-    if os.path.exists(status_file):
-        with open(status_file, "r", encoding="utf-8") as f:
-            last_export = f.read().strip()
-            
-    if last_export != export_date_str:
-        master_file = "scan_master_history.csv"
-        if os.path.exists(master_file):
-            df = pd.read_csv(master_file, encoding="utf-8-sig")
-            df['時刻(DT)'] = pd.to_datetime(df['時刻'])
-            
-            mask = (df['時刻(DT)'] > start_thresh) & (df['時刻(DT)'] <= end_thresh)
-            df_export = df[mask].drop(columns=['時刻(DT)'])
-            
-            # ★変更：デスクトップのパスを取得してフォルダを作成
-            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-            export_dir = os.path.join(desktop_path, "日次出力データ")
-            os.makedirs(export_dir, exist_ok=True)
-            
-            export_path = os.path.join(export_dir, f"Daily_Export_{export_date_str}_1300.csv")
-            
-            if not df_export.empty:
-                df_export.to_csv(export_path, index=False, encoding="utf-8-sig")
-                
-        with open(status_file, "w", encoding="utf-8") as f:
-            f.write(export_date_str)
-            
-        st.toast(f"⏰ 13時を過ぎたため、デスクトップへ定期データを出力しました！ ({export_date_str})")
+    if not df_daily.empty:
+        has_daily_data = True
+        csv_daily = df_daily.to_csv(index=False).encode('utf-8-sig')
 
-auto_export_at_1300()
+# ====================================================
+# ★ ダウンロード強制アラート画面
+# ====================================================
+if needs_download:
+    st.markdown(
+        """
+        <div style="background-color:#ffe6e6; border:5px solid #ff4b4b; padding:25px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
+            <h1 style="margin:0; font-size:36px; color:#d9363e; font-weight:900;">⚠️ 【重要】13時を過ぎました ⚠️</h1>
+            <p style="margin-top:15px; font-size:22px; color:#333; font-weight:bold;">午後の作業を開始する前に、必ず日次データをダウンロードしてください。</p>
+            <p style="margin-top:5px; font-size:16px; color:#666;">※ダウンロードが完了するまで、バーコードの読み込みはロックされます。</p>
+        </div>
+        """, unsafe_allow_html=True
+    )
+    
+    col_dl1, col_dl2, col_dl3 = st.columns([1, 2, 1])
+    with col_dl2:
+        if has_daily_data:
+            # データがある場合はダウンロードボタンを表示
+            if st.download_button(
+                label="📥 ここをクリックして【13時締めデータ】をダウンロード・ロック解除",
+                data=csv_daily,
+                file_name=f"Daily_Export_{target_date_str}_1300.csv",
+                mime="text/csv",
+                use_container_width=True,
+                type="primary"
+            ):
+                # クリックされたら記録を更新して画面リロード（ロック解除）
+                with open(status_file, "w", encoding="utf-8") as f:
+                    f.write(target_date_str)
+                st.rerun()
+        else:
+            # データが1件もない場合は確認ボタンのみ
+            if st.button("✅ 対象期間のデータなし（クリックしてロック解除・作業開始）", use_container_width=True, type="primary"):
+                with open(status_file, "w", encoding="utf-8") as f:
+                    f.write(target_date_str)
+                st.rerun()
+    st.write("---")
 
+# ====================================================
 # 1. 初期状態の準備
+# ====================================================
 if 'reference_code' not in st.session_state:
     st.session_state.reference_code = ""
 if 'group_id' not in st.session_state:
@@ -112,7 +148,9 @@ def save_to_master_csv(log_entry):
     else:
         df.to_csv(file_path, mode='a', header=False, index=False, encoding="utf-8-sig")
 
+# ====================================================
 # 2. 音声ファイルを読み込んで再生する仕組み
+# ====================================================
 def play_error_wav_file():
     WAV_FILE = "ng_voice.wav.wav"
     if not os.path.exists(WAV_FILE):
@@ -145,8 +183,10 @@ def play_completion_warning_wav_file():
         """, height=0
     )
 
+# ====================================================
 # 3. 読み込まれた瞬間に動く自動処理
-max_count = st.number_input("照合する個数を設定してください（最大30）", min_value=1, max_value=30, value=5)
+# ====================================================
+max_count = st.number_input("照合する個数を設定してください（最大30）", min_value=1, max_value=30, value=5, disabled=needs_download)
 
 def process_scan():
     scanned_text = st.session_state.scan_input
@@ -208,7 +248,9 @@ def process_scan():
         
     st.session_state.scan_input = ""
 
+# ====================================================
 # 4. 画面の表示部分
+# ====================================================
 st.write("---")
 
 if st.session_state.reference_code:
@@ -247,14 +289,17 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
             """, unsafe_allow_html=True
         )
 
-    if st.button("リセットして次へ", type="primary", use_container_width=True):
+    if st.button("リセットして次へ", type="primary", use_container_width=True, disabled=needs_download):
         reset_cycle()
         st.rerun()
 
 # --- 通常の読み込み待ち状態の場合 ---
 else:
     if not st.session_state.reference_code:
-        st.info("💡 【1】最初のバーコード（参照先）を読み込んでください")
+        if needs_download:
+            st.warning("🔒 ダウンロードが完了するまで読み込みはできません")
+        else:
+            st.info("💡 【1】最初のバーコード（参照先）を読み込んでください")
     else:
         st.write(f"**現在の目標:** {st.session_state.scanned_count} / {max_count} 個完了")
         
@@ -271,36 +316,38 @@ else:
         else:
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
 
-    st.text_input("▼ ここにカーソルがある状態で読み込んでください", key="scan_input", on_change=process_scan)
+    # ★ ここで強制ロック（disabled）をかける！
+    st.text_input("▼ ここにカーソルがある状態で読み込んでください", key="scan_input", on_change=process_scan, disabled=needs_download)
     
-    components.html(
-        """
-        <script>
-        try {
-            const doc = window.parent.document;
-            let attempts = 0;
-            const focusInterval = setInterval(function() {
-                var inputs = doc.querySelectorAll('input[type="text"]');
-                for (var i = 0; i < inputs.length; i++) {
-                    if (!inputs[i].disabled) {
-                        inputs[i].focus();
-                        clearInterval(focusInterval);
-                        return;
+    if not needs_download:
+        components.html(
+            """
+            <script>
+            try {
+                const doc = window.parent.document;
+                let attempts = 0;
+                const focusInterval = setInterval(function() {
+                    var inputs = doc.querySelectorAll('input[type="text"]');
+                    for (var i = 0; i < inputs.length; i++) {
+                        if (!inputs[i].disabled) {
+                            inputs[i].focus();
+                            clearInterval(focusInterval);
+                            return;
+                        }
                     }
-                }
-                attempts++;
-                if (attempts > 20) clearInterval(focusInterval);
-            }, 100);
-        } catch (e) {
-        }
-        </script>
-        """, height=0
-    )
+                    attempts++;
+                    if (attempts > 20) clearInterval(focusInterval);
+                }, 100);
+            } catch (e) {
+            }
+            </script>
+            """, height=0
+        )
 
 # --- 照合履歴の表示 ---
 if st.session_state.scan_history:
     st.write("---")
-    st.write("### 📋 照合履歴（全履歴・最新が一番上）")
+    st.write("### 📋 照合履歴（現在のセッション・最新が上）")
     
     df_history = pd.DataFrame(st.session_state.scan_history)
     st.dataframe(df_history, use_container_width=True)
@@ -309,11 +356,11 @@ if st.session_state.scan_history:
 st.write("---")
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("現在のセットを途中でリセット（※履歴は残ります）"):
+    if st.button("現在のセットを途中でリセット（※履歴は残ります）", disabled=needs_download):
         reset_cycle()
         st.rerun()
 with col2:
-    if st.button("画面の表示を完全初期化（※裏側のファイルは消えません）"):
+    if st.button("画面の表示を完全初期化（※裏側のファイルは消えません）", disabled=needs_download):
         st.session_state.reference_code = ""
         st.session_state.group_id = ""
         st.session_state.scanned_count = 0
@@ -326,37 +373,21 @@ with col2:
         st.rerun()
 
 # ====================================================
-# ★新規追加：強制出力（バックアップ）メニュー
+# ★ クラウド対応：全件ダウンロードメニュー
 # ====================================================
 st.write("---")
-st.write("### 💾 データ出力・強制保存")
-col_ex1, col_ex2 = st.columns(2)
+st.write("### 📦 過去の全データ バックアップ")
 
-master_file = "scan_master_history.csv"
 if os.path.exists(master_file):
-    df_master = pd.read_csv(master_file, encoding="utf-8-sig")
-    csv_master = df_master.to_csv(index=False).encode('utf-8-sig')
+    df_master_all = pd.read_csv(master_file, encoding="utf-8-sig")
+    csv_master_all = df_master_all.to_csv(index=False).encode('utf-8-sig')
     
-    with col_ex1:
-        st.download_button(
-            label="📥 全履歴データをダウンロード",
-            data=csv_master,
-            file_name=f"All_History_Export_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-        
-    with col_ex2:
-        if st.button("📂 デスクトップの『日次出力データ』へ強制出力", use_container_width=True):
-            # ★変更：デスクトップのパスを取得してフォルダを作成
-            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-            export_dir = os.path.join(desktop_path, "日次出力データ")
-            os.makedirs(export_dir, exist_ok=True)
-            
-            now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            export_path = os.path.join(export_dir, f"Forced_Export_{now_str}.csv")
-            
-            df_master.to_csv(export_path, index=False, encoding="utf-8-sig")
-            st.success(f"デスクトップに出力しました！ ({export_path})")
+    st.download_button(
+        label="📦 これまでの【全履歴データ】をすべてダウンロード",
+        data=csv_master_all,
+        file_name=f"All_History_Export_{jst_now.strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 else:
     st.info("まだ保存されたマスターデータがありません。（バーコードを読み込むと生成されます）")
