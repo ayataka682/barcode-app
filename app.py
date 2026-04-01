@@ -6,7 +6,36 @@ import time
 import base64
 import os
 
-st.title("バーコード照合アプリ")
+st.set_page_config(page_title="バーコード照合アプリ", layout="wide")
+
+# ====================================================
+# ★ CSSで画面幅を100%限界まで使い切る超拡張設定
+# ====================================================
+st.markdown("""<style>
+    /* 画面左右の余白を極限まで削り、横幅100%を強制 */
+    .main .block-container { 
+        padding-top: 1rem; 
+        padding-bottom: 1rem; 
+        padding-left: 2%; 
+        padding-right: 2%; 
+        max-width: 100% !important; 
+    }
+    /* Streamlitの標準ボタンをすべて巨大化＆太字に */
+    .stButton > button {
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+    }
+    /* テキスト入力欄の文字も大きく */
+    .stTextInput > div > div > input {
+        font-size: 24px !important;
+        font-weight: bold !important;
+        padding: 10px !important;
+    }
+</style>""", unsafe_allow_html=True)
+
+st.title("📦 バーコード照合アプリ")
 
 # いただいた実データ
 master_data = {
@@ -103,15 +132,15 @@ if os.path.exists(master_file):
 if needs_download:
     st.markdown(
         """
-        <div style="background-color:#ffe6e6; border:5px solid #ff4b4b; padding:25px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-            <h1 style="margin:0; font-size:36px; color:#d9363e; font-weight:900;">⚠️ 【重要】13時を過ぎました ⚠️</h1>
-            <p style="margin-top:15px; font-size:22px; color:#333; font-weight:bold;">午後の作業を開始する前に、必ず日次データをダウンロードしてください。</p>
-            <p style="margin-top:5px; font-size:16px; color:#666;">※データをダウンロードすると、対象の履歴はアプリ内から消去されロックが解除されます。</p>
+        <div style="background-color:#ffe6e6; border:5px solid #ff4b4b; padding:30px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 8px 15px rgba(0,0,0,0.2);">
+            <h1 style="margin:0; font-size:42px; color:#d9363e; font-weight:900;">⚠️ 【重要】13時を過ぎました ⚠️</h1>
+            <p style="margin-top:15px; font-size:26px; color:#333; font-weight:bold;">午後の作業を開始する前に、必ず日次データをダウンロードしてください。</p>
+            <p style="margin-top:5px; font-size:18px; color:#666;">※データをダウンロードすると、対象の履歴はアプリ内から消去されロックが解除されます。</p>
         </div>
         """, unsafe_allow_html=True
     )
     
-    col_dl1, col_dl2, col_dl3 = st.columns([1, 2, 1])
+    col_dl1, col_dl2, col_dl3 = st.columns([1, 4, 1]) # ボタンの横幅も広げる
     with col_dl2:
         if has_daily_data:
             st.download_button(
@@ -265,20 +294,20 @@ st.write("---")
 if st.session_state.reference_code:
     mark_text = master_data.get(st.session_state.reference_code, "（登録なし）")
 
-    # ★ 変更：参照先と進捗（何個中何個）を横並びの特大パネルで表示
+    # ★ 変更：パネルをさらに巨大化・フォントサイズMAX・横幅100%
     st.markdown(
         f"""
-        <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom:20px;">
-            <div style="flex: 1; min-width: 250px; background-color:#e6f7ff; border:2px solid #1890ff; padding:20px; border-radius:10px; text-align:center;">
-                <p style="margin:0; font-size:18px; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
-                <p style="margin:0; font-size:48px; font-weight:bold; color:#002c8c; letter-spacing: 2px;">{st.session_state.reference_code}</p>
-                <p style="margin:15px 0 0 0; font-size:36px; font-weight:bold; color:#d9363e;">【 {mark_text} 】</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-bottom:30px; width: 100%;">
+            <div style="flex: 1; min-width: 350px; background-color:#e6f7ff; border:4px solid #1890ff; padding:30px; border-radius:15px; text-align:center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <p style="margin:0; font-size:24px; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
+                <p style="margin:10px 0; font-size:64px; font-weight:900; color:#002c8c; letter-spacing: 4px;">{st.session_state.reference_code}</p>
+                <p style="margin:0; font-size:48px; font-weight:900; color:#d9363e;">【 {mark_text} 】</p>
             </div>
-            <div style="flex: 1; min-width: 250px; background-color:#f6ffed; border:2px solid #52c41a; padding:20px; border-radius:10px; text-align:center; display: flex; flex-direction: column; justify-content: center;">
-                <p style="margin:0; font-size:18px; color:#389e0d; font-weight:bold;">📊 現在の進捗（OK数 / 目標数）</p>
-                <p style="margin:10px 0 0 0; font-size:48px; font-weight:bold; color:#237804;">
-                    <span style="font-size:72px; color:#52c41a;">{st.session_state.scanned_count}</span> 
-                    <span style="font-size:36px;">/ {max_count}</span>
+            <div style="flex: 1; min-width: 350px; background-color:#f6ffed; border:4px solid #52c41a; padding:30px; border-radius:15px; text-align:center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <p style="margin:0; font-size:24px; color:#389e0d; font-weight:bold;">📊 現在の進捗（OK数 / 目標数）</p>
+                <p style="margin:15px 0 0 0; font-weight:900; color:#237804; display: flex; align-items: baseline; justify-content: center; gap: 10px;">
+                    <span style="font-size:100px; color:#52c41a; line-height:0.8;">{st.session_state.scanned_count}</span> 
+                    <span style="font-size:48px;">/ {max_count}</span>
                 </p>
             </div>
         </div>
@@ -290,9 +319,9 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
     if st.session_state.cycle_has_ng:
         st.markdown(
             """
-            <div style="background-color:#fff3cd; border:4px solid #ffc107; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
-                <p style="margin:0; font-size:40px; font-weight:bold; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
-                <p style="margin-top:10px; font-size:22px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
+            <div style="background-color:#fff3cd; border:5px solid #ffc107; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
+                <p style="margin:0; font-size:48px; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
+                <p style="margin-top:15px; font-size:28px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -302,8 +331,8 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
     else:
         st.markdown(
             """
-            <div style="background-color:#d4edda; border:4px solid #28a745; padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
-                <p style="margin:0; font-size:40px; font-weight:bold; color:#155724;">✨ 照合完了（完全一致） ✨</p>
+            <div style="background-color:#d4edda; border:5px solid #28a745; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
+                <p style="margin:0; font-size:56px; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -320,7 +349,6 @@ else:
         else:
             st.info("💡 【1】最初のバーコード（参照先）を読み込んでください")
     else:
-        # 下部にあった小さいテキスト表示を削除し、エラー等のフィードバックのみ表示
         if st.session_state.last_scan_ng:
             st.error(f"❌ NG! 一致しませんでした。（読込: {st.session_state.ng_text}）\n\nもう一度、正しいバーコードを読み込んでください。")
             if st.session_state.play_voice:
@@ -329,12 +357,12 @@ else:
                 
         elif st.session_state.last_scan_ok:
             st.success(f"⭕ OK! 一致しました。（読込: {st.session_state.ok_text}）")
-            st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
             
         else:
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
 
-    st.text_input("▼ ここにカーソルがある状態で読み込んでください", key="scan_input", on_change=process_scan, disabled=needs_download)
+    st.markdown("<p style='font-size:20px; font-weight:bold; color:#333; margin-bottom:0;'>▼ ここにカーソルがある状態で読み込んでください</p>", unsafe_allow_html=True)
+    st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
     if not needs_download:
         components.html(
@@ -364,7 +392,7 @@ else:
 # --- 照合履歴の表示 ---
 if st.session_state.scan_history:
     st.write("---")
-    st.write("### 📋 照合履歴（現在のセッション・最新が上）")
+    st.markdown("<h3 style='font-size:28px; font-weight:bold;'>📋 照合履歴（現在のセッション・最新が上）</h3>", unsafe_allow_html=True)
     
     df_history = pd.DataFrame(st.session_state.scan_history)
     st.dataframe(df_history, use_container_width=True)
@@ -381,7 +409,7 @@ if st.button("🔄 現在のセットを最初からやり直す", disabled=need
 # ★ クラウド対応：全件ダウンロードメニュー
 # ====================================================
 st.write("---")
-st.write("### 📦 過去の全データ 強制バックアップ")
+st.markdown("<h3 style='font-size:28px; font-weight:bold;'>📦 過去の全データ 強制バックアップ</h3>", unsafe_allow_html=True)
 
 if os.path.exists(master_file):
     df_master_all = pd.read_csv(master_file, encoding="utf-8-sig")
