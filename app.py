@@ -51,8 +51,11 @@ def auto_export_at_1300():
             mask = (df['時刻(DT)'] > start_thresh) & (df['時刻(DT)'] <= end_thresh)
             df_export = df[mask].drop(columns=['時刻(DT)'])
             
-            export_dir = "日次出力データ"
+            # ★変更：デスクトップのパスを取得してフォルダを作成
+            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            export_dir = os.path.join(desktop_path, "日次出力データ")
             os.makedirs(export_dir, exist_ok=True)
+            
             export_path = os.path.join(export_dir, f"Daily_Export_{export_date_str}_1300.csv")
             
             if not df_export.empty:
@@ -61,7 +64,7 @@ def auto_export_at_1300():
         with open(status_file, "w", encoding="utf-8") as f:
             f.write(export_date_str)
             
-        st.toast(f"⏰ 13時を過ぎたため、定期データを出力しました！ ({export_date_str})")
+        st.toast(f"⏰ 13時を過ぎたため、デスクトップへ定期データを出力しました！ ({export_date_str})")
 
 auto_export_at_1300()
 
@@ -344,13 +347,16 @@ if os.path.exists(master_file):
         )
         
     with col_ex2:
-        if st.button("📂 今すぐ『日次出力データ』フォルダに強制出力", use_container_width=True):
-            export_dir = "日次出力データ"
+        if st.button("📂 デスクトップの『日次出力データ』へ強制出力", use_container_width=True):
+            # ★変更：デスクトップのパスを取得してフォルダを作成
+            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            export_dir = os.path.join(desktop_path, "日次出力データ")
             os.makedirs(export_dir, exist_ok=True)
+            
             now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             export_path = os.path.join(export_dir, f"Forced_Export_{now_str}.csv")
             
             df_master.to_csv(export_path, index=False, encoding="utf-8-sig")
-            st.success(f"フォルダ内に強制出力しました！ ({export_path})")
+            st.success(f"デスクトップに出力しました！ ({export_path})")
 else:
     st.info("まだ保存されたマスターデータがありません。（バーコードを読み込むと生成されます）")
