@@ -10,51 +10,66 @@ st.title("バーコード照合アプリ")
 
 # いただいた実データ
 master_data = {
-    "0201": "Ａ",
-    "0202": "Ｂ",
-    "0203": "蝶",
-    "0204": "チューリップ",
-    "0205": "鉛筆",
-    "0206": "クジラ",
-    "0207": "飛行機",
-    "0208": "リ",
-    "0209": "足跡",
-    "0210": "＃",
-    "0211": "★",
-    "0212": "３３３",
-    "0213": "トンボ",
-    "0214": "魚",
-    "0215": "ウサギ",
-    "0216": "電話",
-    "0217": "ハサミ",
-    "0218": "サッカーボール",
-    "0219": "チョキ",
-    "0220": "ピストル",
-    "0221": "音符",
-    "0222": "ペンギン",
-    "0223": "セミ",
-    "0224": "車",
-    "0225": "かたつむり",
-    "0226": "テルテル坊主",
-    "0227": "ハート",
-    "0228": "牛",
-    "0229": "かさ",
-    "0230": "（二重丸）",
-    "0231": "日の丸（ハタ）",
-    "0232": "ト音記号",
-    "0233": "温泉",
-    "0234": "へび",
-    "0235": "バナナ",
-    "0236": "〒（郵便マーク）",
-    "0237": "ヘリコプター",
-    "0238": "新幹線",
-    "0239": "家",
-    "0240": "自転車"
+    "0201": "Ａ", "0202": "Ｂ", "0203": "蝶", "0204": "チューリップ",
+    "0205": "鉛筆", "0206": "クジラ", "0207": "飛行機", "0208": "リ",
+    "0209": "足跡", "0210": "＃", "0211": "★", "0212": "３３３",
+    "0213": "トンボ", "0214": "魚", "0215": "ウサギ", "0216": "電話",
+    "0217": "ハサミ", "0218": "サッカーボール", "0219": "チョキ", "0220": "ピストル",
+    "0221": "音符", "0222": "ペンギン", "0223": "セミ", "0224": "車",
+    "0225": "かたつむり", "0226": "テルテル坊主", "0227": "ハート", "0228": "牛",
+    "0229": "かさ", "0230": "（二重丸）", "0231": "日の丸（ハタ）", "0232": "ト音記号",
+    "0233": "温泉", "0234": "へび", "0235": "バナナ", "0236": "〒（郵便マーク）",
+    "0237": "ヘリコプター", "0238": "新幹線", "0239": "家", "0240": "自転車"
 }
+
+# --- 13:00の自動出力処理 ---
+def auto_export_at_1300():
+    now = datetime.datetime.now()
+    jst_now = now + datetime.timedelta(hours=9)
+    
+    if jst_now.hour >= 13:
+        export_date_str = jst_now.strftime("%Y%m%d")
+        end_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
+    else:
+        export_date_str = (jst_now - datetime.timedelta(days=1)).strftime("%Y%m%d")
+        end_thresh = (jst_now - datetime.timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
+        
+    start_thresh = end_thresh - datetime.timedelta(days=1)
+    
+    status_file = "last_export_status.txt"
+    last_export = ""
+    if os.path.exists(status_file):
+        with open(status_file, "r", encoding="utf-8") as f:
+            last_export = f.read().strip()
+            
+    if last_export != export_date_str:
+        master_file = "scan_master_history.csv"
+        if os.path.exists(master_file):
+            df = pd.read_csv(master_file, encoding="utf-8-sig")
+            df['時刻(DT)'] = pd.to_datetime(df['時刻'])
+            
+            mask = (df['時刻(DT)'] > start_thresh) & (df['時刻(DT)'] <= end_thresh)
+            df_export = df[mask].drop(columns=['時刻(DT)'])
+            
+            export_dir = "日次出力データ"
+            os.makedirs(export_dir, exist_ok=True)
+            export_path = os.path.join(export_dir, f"Daily_Export_{export_date_str}_1300.csv")
+            
+            if not df_export.empty:
+                df_export.to_csv(export_path, index=False, encoding="utf-8-sig")
+                
+        with open(status_file, "w", encoding="utf-8") as f:
+            f.write(export_date_str)
+            
+        st.toast(f"⏰ 13時を過ぎたため、定期データを出力しました！ ({export_date_str})")
+
+auto_export_at_1300()
 
 # 1. 初期状態の準備
 if 'reference_code' not in st.session_state:
     st.session_state.reference_code = ""
+if 'group_id' not in st.session_state:
+    st.session_state.group_id = ""
 if 'scanned_count' not in st.session_state:
     st.session_state.scanned_count = 0
 if 'last_scan_ng' not in st.session_state:
@@ -76,16 +91,23 @@ if 'cycle_has_ng' not in st.session_state:
 if 'play_completion_warning' not in st.session_state:
     st.session_state.play_completion_warning = False
 
-# リセット時に状態を綺麗にする関数
 def reset_cycle():
-    st.session_state.scan_history = [log for log in st.session_state.scan_history if log["判定"] == "❌ NG"]
     st.session_state.reference_code = ""
+    st.session_state.group_id = ""
     st.session_state.scanned_count = 0
     st.session_state.last_scan_ng = False
     st.session_state.last_scan_ok = False
     st.session_state.play_voice = False
     st.session_state.cycle_has_ng = False 
     st.session_state.play_completion_warning = False
+
+def save_to_master_csv(log_entry):
+    df = pd.DataFrame([log_entry])
+    file_path = "scan_master_history.csv"
+    if not os.path.exists(file_path):
+        df.to_csv(file_path, index=False, encoding="utf-8-sig")
+    else:
+        df.to_csv(file_path, mode='a', header=False, index=False, encoding="utf-8-sig")
 
 # 2. 音声ファイルを読み込んで再生する仕組み
 def play_error_wav_file():
@@ -134,12 +156,12 @@ def process_scan():
 
     if not st.session_state.reference_code:
         st.session_state.reference_code = scanned_text
+        st.session_state.group_id = f"SET-{jst_now.strftime('%Y%m%d-%H%M%S')}"
         st.session_state.scan_input = ""
         st.session_state.last_scan_ng = False
         st.session_state.last_scan_ok = False
         return
 
-    # ★変更：読み込んだバーコードのマーク名も取得する
     ref_mark_name = master_data.get(st.session_state.reference_code, "（登録なし）")
     scanned_mark_name = master_data.get(scanned_text, "（登録なし）")
 
@@ -149,13 +171,16 @@ def process_scan():
         st.session_state.last_scan_ok = True
         st.session_state.ok_text = scanned_text
         
-        # 履歴に両方のマーク名を入れる
-        st.session_state.scan_history.insert(0, {
+        log_entry = {
+            "グループID": st.session_state.group_id,
+            "目標数": max_count,
             "判定": "⭕ OK", 
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
-            "読込内容": f"{scanned_text} ({scanned_mark_name})", # ★ここを変更！
+            "読込内容": f"{scanned_text} ({scanned_mark_name})",
             "時刻": time_str
-        })
+        }
+        st.session_state.scan_history.insert(0, log_entry)
+        save_to_master_csv(log_entry)
         
         if st.session_state.scanned_count >= max_count and st.session_state.cycle_has_ng:
             st.session_state.play_completion_warning = True
@@ -167,13 +192,16 @@ def process_scan():
         st.session_state.ng_text = scanned_text
         st.session_state.cycle_has_ng = True 
         
-        # 履歴に両方のマーク名を入れる
-        st.session_state.scan_history.insert(0, {
+        log_entry = {
+            "グループID": st.session_state.group_id,
+            "目標数": max_count,
             "判定": "❌ NG", 
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
-            "読込内容": f"{scanned_text} ({scanned_mark_name})", # ★ここを変更！
+            "読込内容": f"{scanned_text} ({scanned_mark_name})",
             "時刻": time_str
-        })
+        }
+        st.session_state.scan_history.insert(0, log_entry)
+        save_to_master_csv(log_entry)
         
     st.session_state.scan_input = ""
 
@@ -269,31 +297,22 @@ else:
 # --- 照合履歴の表示 ---
 if st.session_state.scan_history:
     st.write("---")
-    st.write("### 📋 照合履歴（最新が一番上）")
+    st.write("### 📋 照合履歴（全履歴・最新が一番上）")
     
     df_history = pd.DataFrame(st.session_state.scan_history)
     st.dataframe(df_history, use_container_width=True)
-    
-    df_ng_only = df_history[df_history["判定"] == "❌ NG"]
-    if not df_ng_only.empty:
-        csv = df_ng_only.to_csv(index=False).encode('utf-8-sig') 
-        st.download_button(
-            label="📥 NG履歴のみをCSV（Excel用）でダウンロード",
-            data=csv,
-            file_name="ng_history.csv",
-            mime="text/csv",
-        )
 
 # --- 強制リセットボタン ---
 st.write("---")
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("途中でリセット（※OK履歴のみ消去）"):
+    if st.button("現在のセットを途中でリセット（※履歴は残ります）"):
         reset_cycle()
         st.rerun()
 with col2:
-    if st.button("完全初期化（※NG履歴もすべて消去）"):
+    if st.button("画面の表示を完全初期化（※裏側のファイルは消えません）"):
         st.session_state.reference_code = ""
+        st.session_state.group_id = ""
         st.session_state.scanned_count = 0
         st.session_state.last_scan_ng = False
         st.session_state.last_scan_ok = False
@@ -302,3 +321,36 @@ with col2:
         st.session_state.play_completion_warning = False
         st.session_state.scan_history = [] 
         st.rerun()
+
+# ====================================================
+# ★新規追加：強制出力（バックアップ）メニュー
+# ====================================================
+st.write("---")
+st.write("### 💾 データ出力・強制保存")
+col_ex1, col_ex2 = st.columns(2)
+
+master_file = "scan_master_history.csv"
+if os.path.exists(master_file):
+    df_master = pd.read_csv(master_file, encoding="utf-8-sig")
+    csv_master = df_master.to_csv(index=False).encode('utf-8-sig')
+    
+    with col_ex1:
+        st.download_button(
+            label="📥 全履歴データをダウンロード",
+            data=csv_master,
+            file_name=f"All_History_Export_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+        
+    with col_ex2:
+        if st.button("📂 今すぐ『日次出力データ』フォルダに強制出力", use_container_width=True):
+            export_dir = "日次出力データ"
+            os.makedirs(export_dir, exist_ok=True)
+            now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            export_path = os.path.join(export_dir, f"Forced_Export_{now_str}.csv")
+            
+            df_master.to_csv(export_path, index=False, encoding="utf-8-sig")
+            st.success(f"フォルダ内に強制出力しました！ ({export_path})")
+else:
+    st.info("まだ保存されたマスターデータがありません。（バーコードを読み込むと生成されます）")
