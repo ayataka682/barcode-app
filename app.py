@@ -66,7 +66,7 @@ st.markdown("""<style>
     
     /* 入力部分の背景も同じ灰色にする */
     input[type="text"], input[type="number"] {
-        background-color: #f0f2f6 !important;
+        background-color: transparent !important;
         border: none !important;
     }
 
@@ -425,12 +425,12 @@ else:
             """, unsafe_allow_html=True)
 
     # ====================================================
-    # ★ 入力エリア ＆ ステップガイドの統合（高さ絶対平行化）
+    # ★ 入力エリア ＆ ステップガイドの統合
     # ====================================================
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    # ★修正：左の枠を少し広げてバランスを整える (25%:75% → 約37.5%:62.5%)
-    col_input1, col_input2 = st.columns([1.5, 2.5])
+    # ★元の幅バランス [1, 3] に戻す
+    col_input1, col_input2 = st.columns([1, 3])
     
     with col_input1:
         if needs_download:
@@ -443,8 +443,8 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        # ★修正：表示枠の「高さ」を下揃えで固定し、どんな長さの文字でもBOXが絶対にズレないようにする
-        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px; font-weight:bold; color:{color_1}; margin:0; line-height:1.3;'>{label_1}</p></div>", unsafe_allow_html=True)
+        # ★文字サイズを小さくし、改行禁止(nowrap)で絶対に1行に収める
+        st.markdown(f"<p style='font-size:18px !important; font-weight:bold; color:{color_1}; margin-bottom:5px; white-space: nowrap;'>{label_1}</p>", unsafe_allow_html=True)
         
         def update_target():
             st.session_state.target_count = st.session_state.target_count_widget
@@ -471,8 +471,8 @@ else:
             label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
             color_2 = "#237804"
             
-        # ★修正：右側も同じく高さを固定して下揃え
-        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px; font-weight:bold; color:{color_2}; margin:0; line-height:1.3;'>{label_2}</p></div>", unsafe_allow_html=True)
+        # ★右側も文字サイズを揃え、改行禁止(nowrap)にする
+        st.markdown(f"<p style='font-size:20px !important; font-weight:bold; color:{color_2}; margin-bottom:5px; white-space: nowrap;'>{label_2}</p>", unsafe_allow_html=True)
         
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
