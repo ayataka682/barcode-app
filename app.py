@@ -140,7 +140,7 @@ if needs_download:
         """, unsafe_allow_html=True
     )
     
-    col_dl1, col_dl2, col_dl3 = st.columns([1, 4, 1]) # ボタンの横幅も広げる
+    col_dl1, col_dl2, col_dl3 = st.columns([1, 4, 1])
     with col_dl2:
         if has_daily_data:
             st.download_button(
@@ -294,7 +294,6 @@ st.write("---")
 if st.session_state.reference_code:
     mark_text = master_data.get(st.session_state.reference_code, "（登録なし）")
 
-    # ★ 変更：パネルをさらに巨大化・フォントサイズMAX・横幅100%
     st.markdown(
         f"""
         <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-bottom:30px; width: 100%;">
@@ -349,17 +348,30 @@ else:
         else:
             st.info("💡 【1】最初のバーコード（参照先）を読み込んでください")
     else:
+        # ★ 変更：OK/NG表示をド派手な特大パネルに変更
         if st.session_state.last_scan_ng:
-            st.error(f"❌ NG! 一致しませんでした。（読込: {st.session_state.ng_text}）\n\nもう一度、正しいバーコードを読み込んでください。")
+            st.markdown(f"""
+            <div style="background-color:#ff4b4b; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
+                <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">❌ NG! 不一致</h2>
+                <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></p>
+                <p style="font-size: 28px; margin: 0; font-weight: bold;">もう一度、正しいバーコードを読み込んでください</p>
+            </div>
+            """, unsafe_allow_html=True)
             if st.session_state.play_voice:
                 play_error_wav_file()
                 st.session_state.play_voice = False
                 
         elif st.session_state.last_scan_ok:
-            st.success(f"⭕ OK! 一致しました。（読込: {st.session_state.ok_text}）")
+            st.markdown(f"""
+            <div style="background-color:#52c41a; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(82,196,26,0.4);">
+                <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">⭕ OK! 一致</h2>
+                <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #52c41a; padding: 5px 20px; border-radius: 8px;">{st.session_state.ok_text}</span></p>
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color:#e6f7ff; border:2px solid #1890ff; padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;'><p style='font-size:24px; font-weight:bold; color:#0050b3; margin:0;'>💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください</p></div>", unsafe_allow_html=True)
             
         else:
-            st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
+            st.markdown(f"<div style='background-color:#e6f7ff; border:2px solid #1890ff; padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;'><p style='font-size:24px; font-weight:bold; color:#0050b3; margin:0;'>💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください</p></div>", unsafe_allow_html=True)
 
     st.markdown("<p style='font-size:20px; font-weight:bold; color:#333; margin-bottom:0;'>▼ ここにカーソルがある状態で読み込んでください</p>", unsafe_allow_html=True)
     st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
