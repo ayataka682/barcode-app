@@ -7,24 +7,22 @@ import base64
 import os
 
 # レイアウトはwideのまま、CSSで最大幅をコントロールします
-st.set_page_config(page_title="バーコード照合アプリ", layout="wide")
+st.set_page_config(page_title="バーコード照合アプリ", layout="centered")
 
 # ====================================================
 # ★ CSSで画面幅のバランスと文字サイズを強制最適化
 # ====================================================
 st.markdown("""<style>
-    /* 1. 画面幅の究極の強制指定（wideモードのまま、中央に1000px幅で固定する） */
-    .main .block-container, div[data-testid="stAppViewBlockContainer"] {
-        max-width: 1000px !important;
-        margin: 0 auto !important; /* 左右の余白を均等にして中央寄せ */
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
+    /* 1. 画面幅の確実な調整（標準の狭い幅を、ちょうどいい1100pxまで広げる） */
+    .block-container { 
+        max-width: 1100px !important; 
+        padding-top: 2rem !important; 
+        padding-bottom: 2rem !important; 
     }
     
-    /* 2. アプリ全体の標準テキストを約1.5倍（24px）に巨大化（※特大パネルには影響させない） */
-    label, div[data-testid="stMarkdownContainer"] > p {
+    /* 2. アプリ全体の標準テキストを約1.5倍（24px）に巨大化 */
+    div[data-testid="stMarkdownContainer"] > p {
         font-size: 24px !important;
-        line-height: 1.5 !important;
     }
     
     /* 見出しも合わせて大きく */
@@ -33,37 +31,42 @@ st.markdown("""<style>
 
     /* Streamlitの標準ボタンを巨大化 */
     .stButton > button {
-        font-size: 26px !important; 
+        font-size: 24px !important; 
         font-weight: 900 !important;
         padding: 15px !important;
         border-radius: 12px !important;
-        height: auto !important;
     }
 
-    /* 3. アラート（情報・エラー等の帯）の文字を大きく */
+    /* 3. アラート（情報・エラー等の帯）の文字を1.5倍大きく */
     div[data-testid="stAlert"] {
         padding: 20px !important;
         border-radius: 10px !important;
     }
-    div[data-testid="stAlert"] p {
+    div[data-testid="stAlert"] div[data-testid="stMarkdownContainer"] > p {
         font-size: 26px !important;
         font-weight: bold !important;
+        line-height: 1.5 !important;
     }
 
     /* 4. データフレーム（照合履歴の表）の文字を大きく */
     div[data-testid="stDataFrame"] {
-        font-size: 22px !important;
+        font-size: 20px !important;
     }
 
-    /* 5. 入力BOXの白と灰色の2色問題を解決（綺麗なグレー単色に） */
+    /* ================================================= */
+    /* ★ 修正：入力BOXの白と灰色の2色問題を完全に解決！ */
+    /* ================================================= */
+    /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"] {
         background-color: #f0f2f6 !important; 
         border-radius: 10px !important;
         border: none !important;
     }
+    
+    /* 入力部分の背景も同じ灰色にする */
     input[type="text"], input[type="number"] {
-        background-color: transparent !important;
+        background-color: #f0f2f6 !important;
         border: none !important;
     }
 
@@ -87,7 +90,7 @@ st.markdown("""<style>
     /* 目標個数のプラス・マイナスボタンも押しやすく大きくする */
     div[data-baseweb="input"] button {
         width: 3.5rem !important;
-        background-color: #f0f2f6 !important;
+        background-color: #f0f2f6 !important; /* ボタン部分も色を合わせる */
     }
 </style>""", unsafe_allow_html=True)
 
@@ -352,17 +355,16 @@ is_working = (st.session_state.reference_code != "")
 # --- 参照先と進捗の特大パネル ---
 if is_working:
     mark_text = master_data.get(st.session_state.reference_code, "（登録なし）")
-    # ★修正：文字サイズが勝手に小さくならないように !important を明記してプロテクト
     st.markdown(
         f"""
         <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-bottom:30px; width: 100%;">
             <div style="flex: 1; min-width: 350px; background-color:#e6f7ff; border:4px solid #1890ff; padding:30px; border-radius:15px; text-align:center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <p style="margin:0; font-size:24px !important; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
+                <p style="margin:0; font-size:24px; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
                 <p style="margin:10px 0; font-size:64px !important; font-weight:900; color:#002c8c; letter-spacing: 4px;">{st.session_state.reference_code}</p>
                 <p style="margin:0; font-size:48px !important; font-weight:900; color:#d9363e;">【 {mark_text} 】</p>
             </div>
             <div style="flex: 1; min-width: 350px; background-color:#f6ffed; border:4px solid #52c41a; padding:30px; border-radius:15px; text-align:center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <p style="margin:0; font-size:24px !important; color:#389e0d; font-weight:bold;">📊 現在の進捗（OK数 / 目標数）</p>
+                <p style="margin:0; font-size:24px; color:#389e0d; font-weight:bold;">📊 現在の進捗（OK数 / 目標数）</p>
                 <p style="margin:15px 0 0 0; font-weight:900; color:#237804; display: flex; align-items: baseline; justify-content: center; gap: 10px;">
                     <span style="font-size:100px !important; color:#52c41a; line-height:0.8;">{st.session_state.scanned_count}</span> 
                     <span style="font-size:48px !important;">/ {st.session_state.target_count}</span>
@@ -379,7 +381,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
             """
             <div style="background-color:#fff3cd; border:5px solid #ffc107; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
                 <p style="margin:0; font-size:48px !important; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
-                <p style="margin-top:15px; font-size:28px !important; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
+                <p style="margin-top:15px; font-size:28px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -405,9 +407,9 @@ else:
         if st.session_state.last_scan_ng:
             st.markdown(f"""
             <div style="background-color:#ff4b4b; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
-                <h2 style="font-size: 80px !important; margin: 0; font-weight: 900; line-height: 1.2;">❌ NG! 不一致</h2>
-                <p style="font-size: 36px !important; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></p>
-                <p style="font-size: 28px !important; margin: 0; font-weight: bold;">もう一度、正しいバーコードを読み込んでください</p>
+                <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">❌ NG! 不一致</h2>
+                <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></p>
+                <p style="font-size: 28px; margin: 0; font-weight: bold;">もう一度、正しいバーコードを読み込んでください</p>
             </div>
             """, unsafe_allow_html=True)
             if st.session_state.play_voice:
@@ -417,16 +419,17 @@ else:
         elif st.session_state.last_scan_ok:
             st.markdown(f"""
             <div style="background-color:#52c41a; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(82,196,26,0.4);">
-                <h2 style="font-size: 80px !important; margin: 0; font-weight: 900; line-height: 1.2;">⭕ OK! 一致</h2>
-                <p style="font-size: 36px !important; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #52c41a; padding: 5px 20px; border-radius: 8px;">{st.session_state.ok_text}</span></p>
+                <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">⭕ OK! 一致</h2>
+                <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #52c41a; padding: 5px 20px; border-radius: 8px;">{st.session_state.ok_text}</span></p>
             </div>
             """, unsafe_allow_html=True)
 
     # ====================================================
-    # ★ 入力エリア ＆ ステップガイドの統合
+    # ★ 入力エリア ＆ ステップガイドの統合（高さ絶対平行化）
     # ====================================================
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
+    # ★修正：左の枠を少し広げてバランスを整える (25%:75% → 約37.5%:62.5%)
     col_input1, col_input2 = st.columns([1.5, 2.5])
     
     with col_input1:
@@ -440,7 +443,8 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px !important; font-weight:bold; color:{color_1}; margin:0; line-height:1.3;'>{label_1}</p></div>", unsafe_allow_html=True)
+        # ★修正：表示枠の「高さ」を下揃えで固定し、どんな長さの文字でもBOXが絶対にズレないようにする
+        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px; font-weight:bold; color:{color_1}; margin:0; line-height:1.3;'>{label_1}</p></div>", unsafe_allow_html=True)
         
         def update_target():
             st.session_state.target_count = st.session_state.target_count_widget
@@ -467,7 +471,8 @@ else:
             label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
             color_2 = "#237804"
             
-        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px !important; font-weight:bold; color:{color_2}; margin:0; line-height:1.3;'>{label_2}</p></div>", unsafe_allow_html=True)
+        # ★修正：右側も同じく高さを固定して下揃え
+        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px; font-weight:bold; color:{color_2}; margin:0; line-height:1.3;'>{label_2}</p></div>", unsafe_allow_html=True)
         
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
