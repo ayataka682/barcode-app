@@ -13,9 +13,9 @@ st.set_page_config(page_title="バーコード照合アプリ", layout="centered
 # ★ CSSで画面幅のバランスと文字サイズを強制最適化
 # ====================================================
 st.markdown("""<style>
-    /* 1. 画面幅の確実な調整（標準の狭い幅を、ちょうどいい1100pxまで広げる） */
+    /* 1. 画面幅の確実な調整（余白を少し削り、1300pxまで広げる） */
     .block-container { 
-        max-width: 1100px !important; 
+        max-width: 1300px !important; 
         padding-top: 2rem !important; 
         padding-bottom: 2rem !important; 
     }
@@ -54,24 +54,31 @@ st.markdown("""<style>
     }
 
     /* ================================================= */
-    /* ★ 修正：入力BOXの白と灰色の2色問題を解決！ */
+    /* ★ 修正：入力BOXの白と灰色の2色問題を完全に解決！ */
     /* ================================================= */
+    /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"] {
         background-color: #f0f2f6 !important; 
         border-radius: 10px !important;
         border: none !important;
     }
+    
+    /* 入力部分の背景も同じ灰色にする */
     input[type="text"], input[type="number"] {
         background-color: transparent !important;
         border: none !important;
     }
+
+    /* ★ バーコード入力欄の文字を強制的に大きく */
     input[type="text"] {
         font-size: 32px !important;
         font-weight: bold !important;
         padding: 15px !important;
         height: 75px !important;
     }
+    
+    /* ★ 目標個数（数字入力欄）の文字を強制的に「超特大」にする */
     input[type="number"] {
         font-size: 48px !important;
         font-weight: 900 !important;
@@ -79,13 +86,15 @@ st.markdown("""<style>
         height: 75px !important;
         color: #0050b3 !important;
     }
+    
+    /* 目標個数のプラス・マイナスボタンも押しやすく大きくする */
     div[data-baseweb="input"] button {
         width: 3.5rem !important;
-        background-color: #f0f2f6 !important;
+        background-color: #f0f2f6 !important; /* ボタン部分も色を合わせる */
     }
 
     /* ================================================= */
-    /* ★ 修正：特大パネルの文字が改行されないベストサイズ */
+    /* ★ 特大パネルの文字が改行されないベストサイズ */
     /* ================================================= */
     /* 左側：参照先パネル */
     .panel-title-blue { font-size: 22px !important; color: #0050b3; font-weight: bold; margin: 0; white-space: nowrap; }
@@ -440,7 +449,9 @@ else:
     # ====================================================
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    col_lbl1, col_lbl2 = st.columns([1, 3])
+    # ★ 枠の比率を微調整し、左の文字がぶつからないようにしました
+    col_lbl1, col_lbl2 = st.columns([1.2, 2.8])
+    
     with col_lbl1:
         if needs_download:
             label_1 = "🔒 ロック中"
@@ -452,7 +463,8 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        st.markdown(f"<div style='font-size:24px !important; font-weight:bold; color:{color_1}; margin-bottom:5px; white-space: nowrap;'>{label_1}</div>", unsafe_allow_html=True)
+        # ★ 文字を大きく(28px)しつつ、絶対に改行させない(nowrap)
+        st.markdown(f"<div style='font-size:28px !important; font-weight:bold; color:{color_1}; margin-bottom:5px; white-space: nowrap;'>{label_1}</div>", unsafe_allow_html=True)
         
     with col_lbl2:
         if needs_download:
@@ -465,9 +477,11 @@ else:
             label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
             color_2 = "#237804"
             
-        st.markdown(f"<div style='font-size:24px !important; font-weight:bold; color:{color_2}; margin-bottom:5px; white-space: nowrap;'>{label_2}</div>", unsafe_allow_html=True)
+        # ★ 右側も文字を大きく(28px)しつつ、絶対に改行させない(nowrap)
+        st.markdown(f"<div style='font-size:28px !important; font-weight:bold; color:{color_2}; margin-bottom:5px; white-space: nowrap;'>{label_2}</div>", unsafe_allow_html=True)
 
-    col_inp1, col_inp2 = st.columns([1, 3])
+    # 入力BOXの行（独立しているため絶対に高さがズレない）
+    col_inp1, col_inp2 = st.columns([1.2, 2.8])
     with col_inp1:
         def update_target():
             st.session_state.target_count = st.session_state.target_count_widget
