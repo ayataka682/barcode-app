@@ -85,20 +85,23 @@ st.markdown("""<style>
     }
 
     /* ================================================= */
-    /* ★ 修正：特大パネルの文字が縮まないようにする専用CSS */
+    /* ★ 修正：特大パネルの文字が改行されないベストサイズ */
     /* ================================================= */
-    .panel-title-blue { font-size: 32px !important; color: #0050b3; font-weight: bold; margin: 0; }
-    .panel-val-blue { font-size: 100px !important; font-weight: 900; color: #002c8c; letter-spacing: 4px; line-height: 1.2; margin: 10px 0; }
-    .panel-sub-blue { font-size: 64px !important; font-weight: 900; color: #d9363e; line-height: 1.2; margin: 0; }
+    /* 左側：参照先パネル */
+    .panel-title-blue { font-size: 22px !important; color: #0050b3; font-weight: bold; margin: 0; white-space: nowrap; }
+    .panel-val-blue { font-size: 72px !important; font-weight: 900; color: #002c8c; letter-spacing: 4px; line-height: 1.2; margin: 10px 0; white-space: nowrap; }
+    .panel-sub-blue { font-size: 36px !important; font-weight: 900; color: #d9363e; line-height: 1.2; margin: 0; white-space: nowrap; }
     
-    .panel-title-green { font-size: 32px !important; color: #389e0d; font-weight: bold; margin: 0; }
-    .panel-val-green { font-size: 150px !important; color: #52c41a; line-height: 0.8; }
-    .panel-sub-green { font-size: 72px !important; }
-    .panel-val-wrapper { font-weight: 900; color: #237804; display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 15px 0 0 0; }
+    /* 右側：進捗パネル */
+    .panel-title-green { font-size: 22px !important; color: #389e0d; font-weight: bold; margin: 0; white-space: nowrap; }
+    .panel-val-green { font-size: 96px !important; color: #52c41a; line-height: 0.8; }
+    .panel-sub-green { font-size: 48px !important; }
+    .panel-val-wrapper { font-weight: 900; color: #237804; display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 15px 0 0 0; white-space: nowrap; }
 
-    .result-title { font-size: 100px !important; margin: 0; font-weight: 900; line-height: 1.2; }
-    .result-val { font-size: 48px !important; margin: 25px 0; font-weight: bold; }
-    .result-sub { font-size: 36px !important; margin: 0; font-weight: bold; }
+    /* 下段：OK/NG結果パネル */
+    .result-title { font-size: 64px !important; margin: 0; font-weight: 900; line-height: 1.2; white-space: nowrap; }
+    .result-val { font-size: 32px !important; margin: 25px 0; font-weight: bold; white-space: nowrap; }
+    .result-sub { font-size: 24px !important; margin: 0; font-weight: bold; white-space: nowrap; }
 
 </style>""", unsafe_allow_html=True)
 
@@ -363,7 +366,6 @@ is_working = (st.session_state.reference_code != "")
 # --- 参照先と進捗の特大パネル ---
 if is_working:
     mark_text = master_data.get(st.session_state.reference_code, "（登録なし）")
-    # ★修正：CSSクラスを使って、絶対に文字が縮まないように保護しました
     st.markdown(
         f"""
         <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-bottom:30px; width: 100%;">
@@ -413,7 +415,6 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
 # --- 通常の読み込み待ち状態の場合 ---
 else:
     if is_working:
-        # ★修正：OK/NGの表示テキストもCSSクラスで保護しました
         if st.session_state.last_scan_ng:
             st.markdown(f"""
             <div style="background-color:#ff4b4b; color:white; padding:40px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
