@@ -6,7 +6,7 @@ import time
 import base64
 import os
 
-# 💡【変更】「wide」ではなく「centered」をベースにして、CSSで広げます
+# レイアウトはwideのまま、CSSで最大幅をコントロールします
 st.set_page_config(page_title="バーコード照合アプリ", layout="centered")
 
 # ====================================================
@@ -53,6 +53,21 @@ st.markdown("""<style>
         font-size: 20px !important;
     }
 
+    /* ================================================= */
+    /* ★ 修正：入力BOXの白と灰色の2色問題を解決！ */
+    /* ================================================= */
+    /* 外枠全体を綺麗な灰色で統一 */
+    div[data-baseweb="input"] {
+        background-color: #f0f2f6 !important; 
+        border-radius: 10px !important;
+    }
+    
+    /* 内側の入力部分を透明にして外枠と同化させる */
+    input[type="text"], input[type="number"] {
+        background-color: transparent !important;
+        border: none !important;
+    }
+
     /* ★ バーコード入力欄の文字を強制的に大きく */
     input[type="text"] {
         font-size: 32px !important;
@@ -60,6 +75,7 @@ st.markdown("""<style>
         padding: 15px !important;
         height: 75px !important;
     }
+    
     /* ★ 目標個数（数字入力欄）の文字を強制的に「超特大」にする */
     input[type="number"] {
         font-size: 48px !important;
@@ -68,6 +84,7 @@ st.markdown("""<style>
         height: 75px !important;
         color: #0050b3 !important;
     }
+    
     /* 目標個数のプラス・マイナスボタンも押しやすく大きくする */
     div[data-baseweb="input"] button {
         width: 3.5rem !important;
