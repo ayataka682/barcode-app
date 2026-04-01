@@ -23,45 +23,83 @@ master_data = {
 }
 
 # ====================================================
+# ★ コールバック関数群（ボタンを押した瞬間に裏で動く処理）
+# ====================================================
+def clear_session_state():
+    st.session_state.reference_code = ""
+    st.session_state.group_id = ""
+    st.session_state.scanned_count = 0
+    st.session_state.last_scan_ng = False
+    st.session_state.last_scan_ok = False
+    st.session_state.play_voice = False
+    st.session_state.cycle_has_ng = False 
+    st.session_state.play_completion_warning = False
+    st.session_state.scan_history = []
+    st.session_state.scan_input = ""
+
+def handle_download_1300(target_date_str, df_remaining, master_file, status_file):
+    # 1. ダウンロード完了（ロック解除）の記録
+    with open(status_file, "w", encoding="utf-8") as f:
+        f.write(target_date_str)
+    
+    # 2. マスターCSVの更新（ダウンロードした分だけを消去し、残りを上書き）
+    if df_remaining.empty:
+        if os.path.exists(master_file):
+            os.remove(master_file)
+    else:
+        df_remaining.to_csv(master_file, index=False, encoding="utf-8-sig")
+    
+    # 3. 画面の履歴をリセットして綺麗にする
+    clear_session_state()
+
+def handle_no_data(target_date_str, status_file):
+    with open(status_file, "w", encoding="utf-8") as f:
+        f.write(target_date_str)
+    clear_session_state()
+
+def handle_download_all(master_file):
+    # マスターCSVを完全に消去
+    if os.path.exists(master_file):
+        os.remove(master_file)
+    # 画面の履歴をリセット
+    clear_session_state()
+
+# ====================================================
 # ★ 13時締めの時刻計算とダウンロード判定
 # ====================================================
 now = datetime.datetime.now()
 jst_now = now + datetime.timedelta(hours=9)
 
-# 💡【修正】直近の13:00を基準に、きっちり「過去24時間分」を算出する
 if jst_now.hour >= 13:
-    # 今日13時を過ぎている場合、対象は「昨日の13:00 ～ 今日の13:00」
     end_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
     start_thresh = end_thresh - datetime.timedelta(days=1)
     target_date_str = jst_now.strftime("%Y%m%d") # 今日の13時締めID
 else:
-    # 今日13時より前の場合、対象は「一昨日の13:00 ～ 昨日の13:00」
     end_thresh = (jst_now - datetime.timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
     start_thresh = end_thresh - datetime.timedelta(days=1)
     target_date_str = (jst_now - datetime.timedelta(days=1)).strftime("%Y%m%d") # 昨日の13時締めID
 
-# 最後にダウンロードした日付を記録するファイル
 status_file = "last_download_status.txt"
 last_download = ""
 if os.path.exists(status_file):
     with open(status_file, "r", encoding="utf-8") as f:
         last_download = f.read().strip()
 
-# ダウンロードが必要かどうかの判定（今日まだダウンロードしていなければTrue）
 needs_download = (last_download != target_date_str)
 
-# データの準備
 master_file = "scan_master_history.csv"
 has_daily_data = False
 csv_daily = b""
+df_remaining = pd.DataFrame()
 
 if os.path.exists(master_file):
     df_m = pd.read_csv(master_file, encoding="utf-8-sig")
     df_m['時刻(DT)'] = pd.to_datetime(df_m['時刻'], errors='coerce')
     
-    # 💡前日13:00:00 〜 当日13:00:00 のデータのみ厳密に抽出
+    # ダウンロード対象データと、それ以外の残すデータを分ける
     mask = (df_m['時刻(DT)'] > start_thresh) & (df_m['時刻(DT)'] <= end_thresh)
     df_daily = df_m[mask].drop(columns=['時刻(DT)'])
+    df_remaining = df_m[~mask].drop(columns=['時刻(DT)']) # ダウンロードした分を除外した残り
     
     if not df_daily.empty:
         has_daily_data = True
@@ -76,7 +114,7 @@ if needs_download:
         <div style="background-color:#ffe6e6; border:5px solid #ff4b4b; padding:25px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
             <h1 style="margin:0; font-size:36px; color:#d9363e; font-weight:900;">⚠️ 【重要】13時を過ぎました ⚠️</h1>
             <p style="margin-top:15px; font-size:22px; color:#333; font-weight:bold;">午後の作業を開始する前に、必ず日次データをダウンロードしてください。</p>
-            <p style="margin-top:5px; font-size:16px; color:#666;">※ダウンロードが完了するまで、バーコードの読み込みはロックされます。</p>
+            <p style="margin-top:5px; font-size:16px; color:#666;">※データをダウンロードすると、対象の履歴はアプリ内から消去されロックが解除されます。</p>
         </div>
         """, unsafe_allow_html=True
     )
@@ -84,52 +122,32 @@ if needs_download:
     col_dl1, col_dl2, col_dl3 = st.columns([1, 2, 1])
     with col_dl2:
         if has_daily_data:
-            # 💡期間もボタンに明記
-            if st.download_button(
-                label=f"📥 ここをクリックして【{start_thresh.strftime('%m/%d 13:00')}〜{end_thresh.strftime('%m/%d 13:00')}】のデータを保存・ロック解除",
+            # 💡 押された瞬間に on_click で裏側のデータ消去が走る
+            st.download_button(
+                label=f"📥 ここをクリックして【{start_thresh.strftime('%m/%d 13:00')}〜{end_thresh.strftime('%m/%d 13:00')}】のデータを保存・消去",
                 data=csv_daily,
                 file_name=f"Daily_Export_{target_date_str}_1300.csv",
                 mime="text/csv",
                 use_container_width=True,
-                type="primary"
-            ):
-                with open(status_file, "w", encoding="utf-8") as f:
-                    f.write(target_date_str)
-                st.rerun()
+                type="primary",
+                on_click=handle_download_1300,
+                args=(target_date_str, df_remaining, master_file, status_file)
+            )
         else:
-            if st.button("✅ 対象期間のデータなし（クリックしてロック解除・作業開始）", use_container_width=True, type="primary"):
-                with open(status_file, "w", encoding="utf-8") as f:
-                    f.write(target_date_str)
-                st.rerun()
+            st.button(
+                "✅ 対象期間のデータなし（クリックしてロック解除・作業開始）", 
+                use_container_width=True, 
+                type="primary",
+                on_click=handle_no_data,
+                args=(target_date_str, status_file)
+            )
     st.write("---")
 
 # ====================================================
 # 1. 初期状態の準備
 # ====================================================
 if 'reference_code' not in st.session_state:
-    st.session_state.reference_code = ""
-if 'group_id' not in st.session_state:
-    st.session_state.group_id = ""
-if 'scanned_count' not in st.session_state:
-    st.session_state.scanned_count = 0
-if 'last_scan_ng' not in st.session_state:
-    st.session_state.last_scan_ng = False
-if 'ng_text' not in st.session_state:
-    st.session_state.ng_text = ""
-if 'last_scan_ok' not in st.session_state:
-    st.session_state.last_scan_ok = False
-if 'ok_text' not in st.session_state:
-    st.session_state.ok_text = ""
-if 'play_voice' not in st.session_state:
-    st.session_state.play_voice = False
-if 'scan_input' not in st.session_state:
-    st.session_state.scan_input = ""
-if 'scan_history' not in st.session_state:
-    st.session_state.scan_history = []
-if 'cycle_has_ng' not in st.session_state:
-    st.session_state.cycle_has_ng = False
-if 'play_completion_warning' not in st.session_state:
-    st.session_state.play_completion_warning = False
+    clear_session_state()
 
 def reset_cycle():
     st.session_state.reference_code = ""
@@ -143,11 +161,10 @@ def reset_cycle():
 
 def save_to_master_csv(log_entry):
     df = pd.DataFrame([log_entry])
-    file_path = "scan_master_history.csv"
-    if not os.path.exists(file_path):
-        df.to_csv(file_path, index=False, encoding="utf-8-sig")
+    if not os.path.exists(master_file):
+        df.to_csv(master_file, index=False, encoding="utf-8-sig")
     else:
-        df.to_csv(file_path, mode='a', header=False, index=False, encoding="utf-8-sig")
+        df.to_csv(master_file, mode='a', header=False, index=False, encoding="utf-8-sig")
 
 # ====================================================
 # 2. 音声ファイルを読み込んで再生する仕組み
@@ -298,7 +315,7 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
 else:
     if not st.session_state.reference_code:
         if needs_download:
-            st.warning("🔒 ダウンロードが完了するまで読み込みはできません")
+            st.warning("🔒 データをダウンロードするまで読み込みはできません")
         else:
             st.info("💡 【1】最初のバーコード（参照先）を読み込んでください")
     else:
@@ -361,33 +378,28 @@ with col1:
         st.rerun()
 with col2:
     if st.button("画面の表示を完全初期化（※裏側のファイルは消えません）", disabled=needs_download):
-        st.session_state.reference_code = ""
-        st.session_state.group_id = ""
-        st.session_state.scanned_count = 0
-        st.session_state.last_scan_ng = False
-        st.session_state.last_scan_ok = False
-        st.session_state.play_voice = False
-        st.session_state.cycle_has_ng = False
-        st.session_state.play_completion_warning = False
-        st.session_state.scan_history = [] 
+        clear_session_state()
         st.rerun()
 
 # ====================================================
 # ★ クラウド対応：全件ダウンロードメニュー
 # ====================================================
 st.write("---")
-st.write("### 📦 過去の全データ バックアップ")
+st.write("### 📦 過去の全データ 強制バックアップ")
 
 if os.path.exists(master_file):
     df_master_all = pd.read_csv(master_file, encoding="utf-8-sig")
     csv_master_all = df_master_all.to_csv(index=False).encode('utf-8-sig')
     
+    # 💡 全データダウンロードでも消去処理を連動
     st.download_button(
-        label="📦 これまでの【全履歴データ】をすべてダウンロード",
+        label="📦 アプリに溜まっている【全履歴データ】をすべてダウンロードして消去",
         data=csv_master_all,
         file_name=f"All_History_Export_{jst_now.strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv",
-        use_container_width=True
+        use_container_width=True,
+        on_click=handle_download_all,
+        args=(master_file,)
     )
 else:
     st.info("まだ保存されたマスターデータがありません。（バーコードを読み込むと生成されます）")
