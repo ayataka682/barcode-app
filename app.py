@@ -192,7 +192,7 @@ if needs_download:
     st.markdown(
         """
         <div style="background-color:#ffe6e6; border:5px solid #ff4b4b; padding:30px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 8px 15px rgba(0,0,0,0.2);">
-            <h1 style="margin:0; font-size:42px; color:#d9363e; font-weight:900;">⚠️ 【重要】13時を過ぎました ⚠️</h1>
+            <h1 style="margin:0; font-size:42px; color:#d9363e; font-weight:900;">⚠️ 【重要】 ⚠️</h1>
             <p style="margin-top:15px; font-size:26px; color:#333; font-weight:bold;">午後の作業を開始する前に、必ず日次データをダウンロードしてください。</p>
             <p style="margin-top:5px; font-size:18px; color:#666;">※データをダウンロードすると、対象の履歴はアプリ内から消去されロックが解除されます。</p>
         </div>
@@ -436,7 +436,7 @@ else:
             label_1 = "🔒 ロック中"
             color_1 = "#ff4b4b"
         elif not is_working:
-            label_1 = "🔰 STEP 1：まず目標個数を確認"
+            label_1 = "🔰 STEP 1：積載個数を確認"
             color_1 = "#0050b3"
         else:
             label_1 = "🎯 目標個数（作業中ロック）"
@@ -511,7 +511,7 @@ if st.session_state.scan_history:
 # ★ 途中でやり直す（リセット）ボタンを1つに統合
 # ====================================================
 st.write("---")
-if st.button("🔄 現在のセットを最初からやり直す", disabled=needs_download, use_container_width=True):
+if st.button("🔄 現在の台車を最初からやり直す", disabled=needs_download, use_container_width=True):
     reset_cycle()
     st.rerun()
 
@@ -519,14 +519,14 @@ if st.button("🔄 現在のセットを最初からやり直す", disabled=need
 # ★ クラウド対応：全件ダウンロードメニュー
 # ====================================================
 st.write("---")
-st.markdown("<h3>📦 過去の全データ 強制バックアップ</h3>", unsafe_allow_html=True)
+st.markdown("<h3>📦 過去のデータ 強制バックアップ</h3>", unsafe_allow_html=True)
 
 if os.path.exists(master_file):
     df_master_all = pd.read_csv(master_file, encoding="utf-8-sig")
     csv_master_all = df_master_all.to_csv(index=False).encode('utf-8-sig')
     
     st.download_button(
-        label="📦 アプリに溜まっている【全履歴データ】をすべてダウンロードして消去",
+        label="📦 【全履歴データ】をすべてダウンロードして消去",
         data=csv_master_all,
         file_name=f"All_History_Export_{jst_now.strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv",
