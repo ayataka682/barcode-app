@@ -31,9 +31,9 @@ st.markdown("""<style>
 
     /* Streamlitの標準ボタンを巨大化 */
     .stButton > button {
-        font-size: 28px !important; 
+        font-size: 24px !important; 
         font-weight: 900 !important;
-        padding: 20px !important;
+        padding: 15px !important;
         border-radius: 12px !important;
     }
 
@@ -50,12 +50,13 @@ st.markdown("""<style>
 
     /* 4. データフレーム（照合履歴の表）の文字を大きく */
     div[data-testid="stDataFrame"] {
-        font-size: 22px !important;
+        font-size: 20px !important;
     }
 
     /* ================================================= */
     /* ★ 修正：入力BOXの白と灰色の2色問題を完全に解決！ */
     /* ================================================= */
+    /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"] {
         background-color: #f0f2f6 !important; 
@@ -63,44 +64,50 @@ st.markdown("""<style>
         border: none !important;
     }
     
+    /* 入力部分の背景も同じ灰色にする */
     input[type="text"], input[type="number"] {
         background-color: transparent !important;
         border: none !important;
     }
 
-    /* ★ 縦並びにしたので、入力欄の文字と高さを「限界まで巨大化」 */
+    /* ★ バーコード入力欄の文字を強制的に大きく */
     input[type="text"] {
-        font-size: 40px !important;
+        font-size: 32px !important;
         font-weight: bold !important;
-        padding: 20px !important;
-        height: 100px !important;
+        padding: 15px !important;
+        height: 75px !important;
     }
     
+    /* ★ 目標個数（数字入力欄）の文字を強制的に「超特大」にする */
     input[type="number"] {
-        font-size: 64px !important;
+        font-size: 48px !important;
         font-weight: 900 !important;
         text-align: center !important;
-        height: 100px !important;
+        height: 75px !important;
         color: #0050b3 !important;
     }
     
+    /* 目標個数のプラス・マイナスボタンも押しやすく大きくする */
     div[data-baseweb="input"] button {
-        width: 4rem !important;
-        background-color: #f0f2f6 !important; 
+        width: 3.5rem !important;
+        background-color: #f0f2f6 !important; /* ボタン部分も色を合わせる */
     }
 
     /* ================================================= */
     /* ★ 特大パネルの文字が改行されないベストサイズ */
     /* ================================================= */
+    /* 左側：参照先パネル */
     .panel-title-blue { font-size: 22px !important; color: #0050b3; font-weight: bold; margin: 0; white-space: nowrap; }
     .panel-val-blue { font-size: 72px !important; font-weight: 900; color: #002c8c; letter-spacing: 4px; line-height: 1.2; margin: 10px 0; white-space: nowrap; }
     .panel-sub-blue { font-size: 36px !important; font-weight: 900; color: #d9363e; line-height: 1.2; margin: 0; white-space: nowrap; }
     
+    /* 右側：進捗パネル */
     .panel-title-green { font-size: 22px !important; color: #389e0d; font-weight: bold; margin: 0; white-space: nowrap; }
     .panel-val-green { font-size: 96px !important; color: #52c41a; line-height: 0.8; }
     .panel-sub-green { font-size: 48px !important; }
     .panel-val-wrapper { font-weight: 900; color: #237804; display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 15px 0 0 0; white-space: nowrap; }
 
+    /* 下段：OK/NG結果パネル */
     .result-title { font-size: 64px !important; margin: 0; font-weight: 900; line-height: 1.2; white-space: nowrap; }
     .result-val { font-size: 32px !important; margin: 25px 0; font-weight: bold; white-space: nowrap; }
     .result-sub { font-size: 24px !important; margin: 0; font-weight: bold; white-space: nowrap; }
@@ -438,63 +445,61 @@ else:
             """, unsafe_allow_html=True)
 
     # ====================================================
-    # ★ 入力エリア ＆ ステップガイドの統合（縦並び特大化）
+    # ★ 入力エリア ＆ ステップガイドの統合
     # ====================================================
-    st.markdown("<hr style='margin:10px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    # -------------------------------
-    # 【上段】STEP 1：積載個数
-    # -------------------------------
-    if needs_download:
-        label_1 = "🔒 ロック中"
-        color_1 = "#ff4b4b"
-    elif not is_working:
-        label_1 = "🔰 STEP 1：積載個数を確認"
-        color_1 = "#0050b3"
-    else:
-        label_1 = "🎯 積載個数（作業中ロック）"
-        color_1 = "#666666"
+    # ★ 枠の比率を微調整し、左の文字がぶつからないようにしました
+    col_lbl1, col_lbl2 = st.columns([1.2, 2.8])
+    
+    with col_lbl1:
+        if needs_download:
+            label_1 = "🔒 ロック中"
+            color_1 = "#ff4b4b"
+        elif not is_working:
+            label_1 = "🔰 STEP 1：積載個数を確認"
+            color_1 = "#0050b3"
+        else:
+            label_1 = "🎯 積載個数（作業中ロック）"
+            color_1 = "#666666"
 
-    # 案内文字を限界まで巨大化（36px）
-    st.markdown(f"<div style='font-size:36px !important; font-weight:bold; color:{color_1}; margin-bottom:10px;'>{label_1}</div>", unsafe_allow_html=True)
-    
-    def update_target():
-        st.session_state.target_count = st.session_state.target_count_widget
+        # ★ 文字を大きく(28px)しつつ、絶対に改行させない(nowrap)
+        st.markdown(f"<div style='font-size:28px !important; font-weight:bold; color:{color_1}; margin-bottom:5px; white-space: nowrap;'>{label_1}</div>", unsafe_allow_html=True)
         
-    st.number_input(
-        "", 
-        min_value=1, 
-        max_value=100, 
-        value=st.session_state.target_count, 
-        key="target_count_widget", 
-        on_change=update_target,
-        disabled=(needs_download or is_working), 
-        label_visibility="collapsed"
-    )
-    
-    # 項目間のゆとり（余白）
-    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    with col_lbl2:
+        if needs_download:
+            label_2 = "🔒 データをダウンロードするまで読み込みできません"
+            color_2 = "#ff4b4b"
+        elif not is_working:
+            label_2 = "🔰 STEP 2：最初のバーコード(基準)をスキャン ▼"
+            color_2 = "#0050b3"
+        else:
+            label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
+            color_2 = "#237804"
+            
+        # ★ 右側も文字を大きく(28px)しつつ、絶対に改行させない(nowrap)
+        st.markdown(f"<div style='font-size:28px !important; font-weight:bold; color:{color_2}; margin-bottom:5px; white-space: nowrap;'>{label_2}</div>", unsafe_allow_html=True)
 
-    # -------------------------------
-    # 【下段】STEP 2/3：バーコードスキャン
-    # -------------------------------
-    if needs_download:
-        label_2 = "🔒 データをダウンロードするまで読み込みできません"
-        color_2 = "#ff4b4b"
-    elif not is_working:
-        label_2 = "🔰 STEP 2：最初のバーコード(基準)をスキャン ▼"
-        color_2 = "#0050b3"
-    else:
-        label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
-        color_2 = "#237804"
+    # 入力BOXの行（独立しているため絶対に高さがズレない）
+    col_inp1, col_inp2 = st.columns([1.2, 2.8])
+    with col_inp1:
+        def update_target():
+            st.session_state.target_count = st.session_state.target_count_widget
+            
+        st.number_input(
+            "", 
+            min_value=1, 
+            max_value=100, 
+            value=st.session_state.target_count, 
+            key="target_count_widget", 
+            on_change=update_target,
+            disabled=(needs_download or is_working), 
+            label_visibility="collapsed"
+        )
         
-    # 案内文字を限界まで巨大化（36px）
-    st.markdown(f"<div style='font-size:36px !important; font-weight:bold; color:{color_2}; margin-bottom:10px;'>{label_2}</div>", unsafe_allow_html=True)
+    with col_inp2:
+        st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
-    st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
-    
-    
-    # オートフォーカス用JavaScript
     if not needs_download:
         components.html(
             """
