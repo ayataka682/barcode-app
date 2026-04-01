@@ -474,4 +474,62 @@ else:
     if not needs_download:
         components.html(
             """
-            <script
+            <script>
+            try {
+                const doc = window.parent.document;
+                let attempts = 0;
+                const focusInterval = setInterval(function() {
+                    var inputs = doc.querySelectorAll('input[type="text"]');
+                    for (var i = 0; i < inputs.length; i++) {
+                        if (!inputs[i].disabled) {
+                            inputs[i].focus();
+                            clearInterval(focusInterval);
+                            return;
+                        }
+                    }
+                    attempts++;
+                    if (attempts > 20) clearInterval(focusInterval);
+                }, 100);
+            } catch (e) {
+            }
+            </script>
+            """, height=0
+        )
+
+# --- 照合履歴の表示 ---
+if st.session_state.scan_history:
+    st.write("---")
+    st.markdown("<h3>📋 照合履歴（現在のセッション・最新が上）</h3>", unsafe_allow_html=True)
+    
+    df_history = pd.DataFrame(st.session_state.scan_history)
+    st.dataframe(df_history, use_container_width=True)
+
+# ====================================================
+# ★ 途中でやり直す（リセット）ボタン
+# ====================================================
+st.write("---")
+if st.button("🔄 現在の台車を最初からやり直す", disabled=needs_download, use_container_width=True):
+    reset_cycle()
+    st.rerun()
+
+# ====================================================
+# ★ クラウド対応：全件ダウンロードメニュー
+# ====================================================
+st.write("---")
+st.markdown("<h3>📦 過去のデータ 強制バックアップ</h3>", unsafe_allow_html=True)
+
+if os.path.exists(master_file):
+    df_master_all = pd.read_csv(master_file, encoding="utf-8-sig")
+    csv_master_all = df_master_all.to_csv(index=False).encode('utf-8-sig')
+    
+    st.download_button(
+        label="📦 【全履歴データ】をすべてダウンロードして消去",
+        data=csv_master_all,
+        file_name=f"All_History_Export_{jst_now.strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+        on_click=handle_download_all,
+        args=(master_file,)
+    )
+else:
+    st.info("まだ保存されたマスターデータがありません。（バーコードを読み込むと生成されます）")
