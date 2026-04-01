@@ -149,6 +149,7 @@ if needs_download:
 if 'reference_code' not in st.session_state:
     clear_session_state()
 
+# 💡【変更点】現在のセットのみリセット（履歴は消さない）
 def reset_cycle():
     st.session_state.reference_code = ""
     st.session_state.group_id = ""
@@ -307,7 +308,7 @@ if st.session_state.reference_code and st.session_state.scanned_count >= max_cou
             """, unsafe_allow_html=True
         )
 
-    if st.button("リセットして次へ", type="primary", use_container_width=True, disabled=needs_download):
+    if st.button("次のセットへ進む", type="primary", use_container_width=True, disabled=needs_download):
         reset_cycle()
         st.rerun()
 
@@ -369,17 +370,14 @@ if st.session_state.scan_history:
     df_history = pd.DataFrame(st.session_state.scan_history)
     st.dataframe(df_history, use_container_width=True)
 
-# --- 強制リセットボタン ---
+# ====================================================
+# ★ 途中でやり直す（リセット）ボタンを1つに統合
+# ====================================================
 st.write("---")
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("現在のセットを途中でリセット（※履歴は残ります）", disabled=needs_download):
-        reset_cycle()
-        st.rerun()
-with col2:
-    if st.button("画面の表示を完全初期化（※裏側のファイルは消えません）", disabled=needs_download):
-        clear_session_state()
-        st.rerun()
+if st.button("🔄 現在のセットを最初からやり直す", disabled=needs_download, use_container_width=True):
+    reset_cycle()
+    st.rerun()
+
 
 # ====================================================
 # ★ クラウド対応：全件ダウンロードメニュー
