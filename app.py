@@ -28,15 +28,17 @@ master_data = {
 now = datetime.datetime.now()
 jst_now = now + datetime.timedelta(hours=9)
 
-# 13時を境界にターゲットとなる日付を決定
+# 💡【修正】直近の13:00を基準に、きっちり「過去24時間分」を算出する
 if jst_now.hour >= 13:
-    start_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
-    end_thresh = start_thresh + datetime.timedelta(days=1)
-    target_date_str = jst_now.strftime("%Y%m%d") # 今日の13時締め
-else:
+    # 今日13時を過ぎている場合、対象は「昨日の13:00 ～ 今日の13:00」
     end_thresh = jst_now.replace(hour=13, minute=0, second=0, microsecond=0)
     start_thresh = end_thresh - datetime.timedelta(days=1)
-    target_date_str = (jst_now - datetime.timedelta(days=1)).strftime("%Y%m%d") # 昨日の13時締め
+    target_date_str = jst_now.strftime("%Y%m%d") # 今日の13時締めID
+else:
+    # 今日13時より前の場合、対象は「一昨日の13:00 ～ 昨日の13:00」
+    end_thresh = (jst_now - datetime.timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
+    start_thresh = end_thresh - datetime.timedelta(days=1)
+    target_date_str = (jst_now - datetime.timedelta(days=1)).strftime("%Y%m%d") # 昨日の13時締めID
 
 # 最後にダウンロードした日付を記録するファイル
 status_file = "last_download_status.txt"
@@ -56,7 +58,8 @@ csv_daily = b""
 if os.path.exists(master_file):
     df_m = pd.read_csv(master_file, encoding="utf-8-sig")
     df_m['時刻(DT)'] = pd.to_datetime(df_m['時刻'], errors='coerce')
-    # 前日13:00 〜 当日13:00 のデータのみ抽出
+    
+    # 💡前日13:00:00 〜 当日13:00:00 のデータのみ厳密に抽出
     mask = (df_m['時刻(DT)'] > start_thresh) & (df_m['時刻(DT)'] <= end_thresh)
     df_daily = df_m[mask].drop(columns=['時刻(DT)'])
     
@@ -81,21 +84,19 @@ if needs_download:
     col_dl1, col_dl2, col_dl3 = st.columns([1, 2, 1])
     with col_dl2:
         if has_daily_data:
-            # データがある場合はダウンロードボタンを表示
+            # 💡期間もボタンに明記
             if st.download_button(
-                label="📥 ここをクリックして【13時締めデータ】をダウンロード・ロック解除",
+                label=f"📥 ここをクリックして【{start_thresh.strftime('%m/%d 13:00')}〜{end_thresh.strftime('%m/%d 13:00')}】のデータを保存・ロック解除",
                 data=csv_daily,
                 file_name=f"Daily_Export_{target_date_str}_1300.csv",
                 mime="text/csv",
                 use_container_width=True,
                 type="primary"
             ):
-                # クリックされたら記録を更新して画面リロード（ロック解除）
                 with open(status_file, "w", encoding="utf-8") as f:
                     f.write(target_date_str)
                 st.rerun()
         else:
-            # データが1件もない場合は確認ボタンのみ
             if st.button("✅ 対象期間のデータなし（クリックしてロック解除・作業開始）", use_container_width=True, type="primary"):
                 with open(status_file, "w", encoding="utf-8") as f:
                     f.write(target_date_str)
@@ -316,7 +317,6 @@ else:
         else:
             st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
 
-    # ★ ここで強制ロック（disabled）をかける！
     st.text_input("▼ ここにカーソルがある状態で読み込んでください", key="scan_input", on_change=process_scan, disabled=needs_download)
     
     if not needs_download:
