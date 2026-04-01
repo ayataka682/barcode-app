@@ -54,9 +54,9 @@ st.markdown("""<style>
     }
 
     /* ================================================= */
-    /* ★ 修正：入力BOXの白と灰色の2色問題を解決！ */
+    /* ★ 修正：入力BOXの白と灰色の2色問題を完全に解決！ */
     /* ================================================= */
-    /* 外枠全体を綺麗な灰色で統一 */
+    /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"] {
         background-color: #f0f2f6 !important; 
@@ -64,9 +64,9 @@ st.markdown("""<style>
         border: none !important;
     }
     
-    /* 内側の入力部分を透明にして外枠と同化させる */
+    /* 入力部分の背景も同じ灰色にする */
     input[type="text"], input[type="number"] {
-        background-color: transparent !important;
+        background-color: #f0f2f6 !important;
         border: none !important;
     }
 
@@ -360,14 +360,14 @@ if is_working:
         <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-bottom:30px; width: 100%;">
             <div style="flex: 1; min-width: 350px; background-color:#e6f7ff; border:4px solid #1890ff; padding:30px; border-radius:15px; text-align:center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                 <p style="margin:0; font-size:24px; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
-                <p style="margin:10px 0; font-size:64px; font-weight:900; color:#002c8c; letter-spacing: 4px;">{st.session_state.reference_code}</p>
-                <p style="margin:0; font-size:48px; font-weight:900; color:#d9363e;">【 {mark_text} 】</p>
+                <p style="margin:10px 0; font-size:64px !important; font-weight:900; color:#002c8c; letter-spacing: 4px;">{st.session_state.reference_code}</p>
+                <p style="margin:0; font-size:48px !important; font-weight:900; color:#d9363e;">【 {mark_text} 】</p>
             </div>
             <div style="flex: 1; min-width: 350px; background-color:#f6ffed; border:4px solid #52c41a; padding:30px; border-radius:15px; text-align:center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                 <p style="margin:0; font-size:24px; color:#389e0d; font-weight:bold;">📊 現在の進捗（OK数 / 目標数）</p>
                 <p style="margin:15px 0 0 0; font-weight:900; color:#237804; display: flex; align-items: baseline; justify-content: center; gap: 10px;">
-                    <span style="font-size:100px; color:#52c41a; line-height:0.8;">{st.session_state.scanned_count}</span> 
-                    <span style="font-size:48px;">/ {st.session_state.target_count}</span>
+                    <span style="font-size:100px !important; color:#52c41a; line-height:0.8;">{st.session_state.scanned_count}</span> 
+                    <span style="font-size:48px !important;">/ {st.session_state.target_count}</span>
                 </p>
             </div>
         </div>
@@ -380,7 +380,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
         st.markdown(
             """
             <div style="background-color:#fff3cd; border:5px solid #ffc107; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                <p style="margin:0; font-size:48px; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
+                <p style="margin:0; font-size:48px !important; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
                 <p style="margin-top:15px; font-size:28px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
@@ -392,7 +392,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
         st.markdown(
             """
             <div style="background-color:#d4edda; border:5px solid #28a745; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                <p style="margin:0; font-size:56px; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</p>
+                <p style="margin:0; font-size:56px !important; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -425,13 +425,14 @@ else:
             """, unsafe_allow_html=True)
 
     # ====================================================
-    # ★ 入力エリア ＆ ステップガイドの統合
+    # ★ 入力エリア ＆ ステップガイドの統合（高さ絶対平行化）
     # ====================================================
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
-    col_input1, col_input2 = st.columns([1, 3])
+    
+    # ★修正：左の枠を少し広げてバランスを整える (25%:75% → 約37.5%:62.5%)
+    col_input1, col_input2 = st.columns([1.5, 2.5])
     
     with col_input1:
-        # 動的ステップガイド（左側）
         if needs_download:
             label_1 = "🔒 ロック中"
             color_1 = "#ff4b4b"
@@ -442,7 +443,8 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        st.markdown(f"<p style='font-size:26px; font-weight:bold; color:{color_1}; margin-bottom:5px;'>{label_1}</p>", unsafe_allow_html=True)
+        # ★修正：表示枠の「高さ」を下揃えで固定し、どんな長さの文字でもBOXが絶対にズレないようにする
+        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px; font-weight:bold; color:{color_1}; margin:0; line-height:1.3;'>{label_1}</p></div>", unsafe_allow_html=True)
         
         def update_target():
             st.session_state.target_count = st.session_state.target_count_widget
@@ -450,7 +452,7 @@ else:
         st.number_input(
             "", 
             min_value=1, 
-            max_value=30, 
+            max_value=100, 
             value=st.session_state.target_count, 
             key="target_count_widget", 
             on_change=update_target,
@@ -459,7 +461,6 @@ else:
         )
         
     with col_input2:
-        # 動的ステップガイド（右側）
         if needs_download:
             label_2 = "🔒 データをダウンロードするまで読み込みできません"
             color_2 = "#ff4b4b"
@@ -470,7 +471,8 @@ else:
             label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
             color_2 = "#237804"
             
-        st.markdown(f"<p style='font-size:26px; font-weight:bold; color:{color_2}; margin-bottom:5px;'>{label_2}</p>", unsafe_allow_html=True)
+        # ★修正：右側も同じく高さを固定して下揃え
+        st.markdown(f"<div style='height: 70px; display: flex; align-items: flex-end; margin-bottom: 5px;'><p style='font-size:22px; font-weight:bold; color:{color_2}; margin:0; line-height:1.3;'>{label_2}</p></div>", unsafe_allow_html=True)
         
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
@@ -508,7 +510,7 @@ if st.session_state.scan_history:
     st.dataframe(df_history, use_container_width=True)
 
 # ====================================================
-# ★ 途中でやり直す（リセット）ボタンを1つに統合
+# ★ 途中でやり直す（リセット）ボタン
 # ====================================================
 st.write("---")
 if st.button("🔄 現在の台車を最初からやり直す", disabled=needs_download, use_container_width=True):
