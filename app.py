@@ -26,11 +26,19 @@ st.markdown("""<style>
         padding: 15px !important;
         border-radius: 12px !important;
     }
-    /* テキスト入力欄と数字入力欄の文字を大きく */
-    .stTextInput > div > div > input, .stNumberInput > div > div > input {
-        font-size: 28px !important;
+    /* ★ バーコード入力欄の文字をさらに大きく・高く */
+    .stTextInput > div > div > input {
+        font-size: 32px !important;
         font-weight: bold !important;
-        padding: 12px !important;
+        padding: 15px !important;
+        height: 75px !important;
+    }
+    /* ★ 目標個数（数字入力欄）の文字を超特大に！ */
+    .stNumberInput > div > div > input {
+        font-size: 48px !important;
+        font-weight: 900 !important;
+        text-align: center !important;
+        height: 75px !important;
     }
     /* st.infoやst.warningなどのシステム通知メッセージ全体を大きく */
     div[data-testid="stAlert"] {
@@ -380,10 +388,10 @@ else:
                 <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #52c41a; padding: 5px 20px; border-radius: 8px;">{st.session_state.ok_text}</span></p>
             </div>
             """, unsafe_allow_html=True)
-            st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
+            st.markdown(f"<div style='background-color:#e6f7ff; border:2px solid #1890ff; padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;'><p style='font-size:24px; font-weight:bold; color:#0050b3; margin:0;'>💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください</p></div>", unsafe_allow_html=True)
             
         else:
-            st.info(f"💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください")
+            st.markdown(f"<div style='background-color:#e6f7ff; border:2px solid #1890ff; padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;'><p style='font-size:24px; font-weight:bold; color:#0050b3; margin:0;'>💡 【2】 {st.session_state.scanned_count + 1}個目の照合先を読み込んでください</p></div>", unsafe_allow_html=True)
 
     # ====================================================
     # ★ 入力エリアの統合（目標個数 ＆ バーコード）
@@ -392,14 +400,16 @@ else:
     col_input1, col_input2 = st.columns([1, 3])
     
     with col_input1:
-        st.markdown("<p style='font-size:22px; font-weight:bold; color:#333; margin-bottom:5px;'>🎯 目標個数</p>", unsafe_allow_html=True)
+        # ★ 案内文字を大きく (26px)
+        st.markdown("<p style='font-size:26px; font-weight:bold; color:#333; margin-bottom:5px;'>🎯 目標個数</p>", unsafe_allow_html=True)
         st.number_input("", min_value=1, max_value=30, value=st.session_state.target_count, key="target_count", disabled=(needs_download or is_working), label_visibility="collapsed")
         
     with col_input2:
         if needs_download:
-            st.markdown("<p style='font-size:22px; font-weight:bold; color:#ff4b4b; margin-bottom:5px;'>🔒 ダウンロードするまで読み込みロック中</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:26px; font-weight:bold; color:#ff4b4b; margin-bottom:5px;'>🔒 ダウンロードするまで読み込みロック中</p>", unsafe_allow_html=True)
         else:
-            st.markdown("<p style='font-size:22px; font-weight:bold; color:#333; margin-bottom:5px;'>▼ ここにカーソルを合わせて読み込んでください</p>", unsafe_allow_html=True)
+            # ★ 案内文字を大きく (26px)
+            st.markdown("<p style='font-size:26px; font-weight:bold; color:#333; margin-bottom:5px;'>▼ ここにカーソルを合わせて読み込んでください</p>", unsafe_allow_html=True)
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
     if not needs_download:
