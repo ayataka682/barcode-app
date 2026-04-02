@@ -13,16 +13,17 @@ st.set_page_config(page_title="バーコード照合アプリ", layout="centered
 # ★ CSSで画面幅のバランスと文字サイズを強制最適化
 # ====================================================
 st.markdown("""<style>
-    /* 1. 画面幅の確実な調整（余白を少し削り、1300pxまで広げる） */
+    /* 1. 画面幅の確実な調整（標準の狭い幅を、ちょうどいい1100pxまで広げる） */
     .block-container { 
-        max-width: 1300px !important; 
+        max-width: 1100px !important; 
         padding-top: 2rem !important; 
         padding-bottom: 2rem !important; 
     }
     
     /* 2. アプリ全体の標準テキストを約1.5倍（24px）に巨大化 */
+    /* ※ !important を削除し、ご自身でのサイズ変更を優先させるようにしました！ */
     div[data-testid="stMarkdownContainer"] > p {
-        font-size: 24px !important;
+        font-size: 24px;
     }
     
     /* 見出しも合わせて大きく */
@@ -92,26 +93,6 @@ st.markdown("""<style>
         width: 3.5rem !important;
         background-color: #f0f2f6 !important; /* ボタン部分も色を合わせる */
     }
-
-    /* ================================================= */
-    /* ★ 特大パネルの文字が改行されないベストサイズ */
-    /* ================================================= */
-    /* 左側：参照先パネル */
-    .panel-title-blue { font-size: 22px !important; color: #0050b3; font-weight: bold; margin: 0; white-space: nowrap; }
-    .panel-val-blue { font-size: 72px !important; font-weight: 900; color: #002c8c; letter-spacing: 4px; line-height: 1.2; margin: 10px 0; white-space: nowrap; }
-    .panel-sub-blue { font-size: 36px !important; font-weight: 900; color: #d9363e; line-height: 1.2; margin: 0; white-space: nowrap; }
-    
-    /* 右側：進捗パネル */
-    .panel-title-green { font-size: 22px !important; color: #389e0d; font-weight: bold; margin: 0; white-space: nowrap; }
-    .panel-val-green { font-size: 96px !important; color: #52c41a; line-height: 0.8; }
-    .panel-sub-green { font-size: 48px !important; }
-    .panel-val-wrapper { font-weight: 900; color: #237804; display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 15px 0 0 0; white-space: nowrap; }
-
-    /* 下段：OK/NG結果パネル */
-    .result-title { font-size: 64px !important; margin: 0; font-weight: 900; line-height: 1.2; white-space: nowrap; }
-    .result-val { font-size: 32px !important; margin: 25px 0; font-weight: bold; white-space: nowrap; }
-    .result-sub { font-size: 24px !important; margin: 0; font-weight: bold; white-space: nowrap; }
-
 </style>""", unsafe_allow_html=True)
 
 st.title("📦 バーコード照合アプリ")
@@ -246,7 +227,7 @@ if needs_download:
 if 'reference_code' not in st.session_state:
     clear_session_state()
 
-# 💡 目標個数もセッションで管理
+# 💡 目標個数もセッションで管理（デフォルトを30に変更）
 if 'target_count' not in st.session_state:
     st.session_state.target_count = 30
 
@@ -379,15 +360,15 @@ if is_working:
         f"""
         <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-bottom:30px; width: 100%;">
             <div style="flex: 1; min-width: 350px; background-color:#e6f7ff; border:4px solid #1890ff; padding:30px; border-radius:15px; text-align:center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <div class="panel-title-blue">🎯 現在の参照先（チューブマーク）</div>
-                <div class="panel-val-blue">{st.session_state.reference_code}</div>
-                <div class="panel-sub-blue">【 {mark_text} 】</div>
+                <p style="margin:0; font-size:24px; color:#0050b3; font-weight:bold;">🎯 現在の参照先（チューブマーク）</p>
+                <p style="margin:10px 0; font-size:80px; font-weight:900; color:#002c8c; letter-spacing: 4px; line-height: 1.2;">{st.session_state.reference_code}</p>
+                <p style="margin:0; font-size:56px; font-weight:900; color:#d9363e; line-height: 1.2;">【 {mark_text} 】</p>
             </div>
             <div style="flex: 1; min-width: 350px; background-color:#f6ffed; border:4px solid #52c41a; padding:30px; border-radius:15px; text-align:center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <div class="panel-title-green">📊 現在の進捗（OK数 / 目標数）</div>
-                <div class="panel-val-wrapper">
-                    <div class="panel-val-green">{st.session_state.scanned_count}</div> 
-                    <div class="panel-sub-green">/ {st.session_state.target_count}</div>
+                <p style="margin:0; font-size:24px; color:#389e0d; font-weight:bold;">📊 現在の進捗（OK数 / 目標数）</p>
+                <div style="margin:15px 0 0 0; font-weight:900; color:#237804; display: flex; align-items: baseline; justify-content: center; gap: 10px;">
+                    <span style="font-size:120px; color:#52c41a; line-height:0.8;">{st.session_state.scanned_count}</span> 
+                    <span style="font-size:56px;">/ {st.session_state.target_count}</span>
                 </div>
             </div>
         </div>
@@ -400,8 +381,8 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
         st.markdown(
             """
             <div style="background-color:#fff3cd; border:5px solid #ffc107; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                <div style="margin:0; font-size:48px !important; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</div>
-                <div style="margin-top:15px; font-size:28px !important; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</div>
+                <p style="margin:0; font-size:48px; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
+                <p style="margin-top:15px; font-size:28px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -412,7 +393,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
         st.markdown(
             """
             <div style="background-color:#d4edda; border:5px solid #28a745; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                <div style="margin:0; font-size:56px !important; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</div>
+                <p style="margin:0; font-size:108px; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -426,10 +407,10 @@ else:
     if is_working:
         if st.session_state.last_scan_ng:
             st.markdown(f"""
-            <div style="background-color:#ff4b4b; color:white; padding:40px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
-                <div class="result-title">❌ NG! 不一致</div>
-                <div class="result-val">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></div>
-                <div class="result-sub">もう一度、正しいバーコードを読み込んでください</div>
+            <div style="background-color:#ff4b4b; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
+                <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">❌ NG! 不一致</h2>
+                <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></p>
+                <p style="font-size: 28px; margin: 0; font-weight: bold;">もう一度、正しいバーコードを読み込んでください</p>
             </div>
             """, unsafe_allow_html=True)
             if st.session_state.play_voice:
@@ -438,9 +419,9 @@ else:
                 
         elif st.session_state.last_scan_ok:
             st.markdown(f"""
-            <div style="background-color:#52c41a; color:white; padding:40px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(82,196,26,0.4);">
-                <div class="result-title">⭕ OK! 一致</div>
-                <div class="result-val">読込内容: <span style="background-color: white; color: #52c41a; padding: 5px 20px; border-radius: 8px;">{st.session_state.ok_text}</span></div>
+            <div style="background-color:#52c41a; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(82,196,26,0.4);">
+                <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">⭕ OK! 一致</h2>
+                <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #52c41a; padding: 5px 20px; border-radius: 8px;">{st.session_state.ok_text}</span></p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -449,10 +430,9 @@ else:
     # ====================================================
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    # ★ 枠の比率を微調整し、左の文字がぶつからないようにしました
-    col_lbl1, col_lbl2 = st.columns([1.2, 2.8])
+    col_input1, col_input2 = st.columns([1, 3])
     
-    with col_lbl1:
+    with col_input1:
         if needs_download:
             label_1 = "🔒 ロック中"
             color_1 = "#ff4b4b"
@@ -463,10 +443,23 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        # ★ 文字を大きく(28px)しつつ、絶対に改行させない(nowrap)
-        st.markdown(f"<div style='font-size:28px !important; font-weight:bold; color:{color_1}; margin-bottom:5px; white-space: nowrap;'>{label_1}</div>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:26px; font-weight:bold; color:{color_1}; margin-bottom:5px;'>{label_1}</p>", unsafe_allow_html=True)
         
-    with col_lbl2:
+        def update_target():
+            st.session_state.target_count = st.session_state.target_count_widget
+            
+        st.number_input(
+            "", 
+            min_value=1, 
+            max_value=30, 
+            value=st.session_state.target_count, 
+            key="target_count_widget", 
+            on_change=update_target,
+            disabled=(needs_download or is_working), 
+            label_visibility="collapsed"
+        )
+        
+    with col_input2:
         if needs_download:
             label_2 = "🔒 データをダウンロードするまで読み込みできません"
             color_2 = "#ff4b4b"
@@ -477,27 +470,8 @@ else:
             label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
             color_2 = "#237804"
             
-        # ★ 右側も文字を大きく(28px)しつつ、絶対に改行させない(nowrap)
-        st.markdown(f"<div style='font-size:28px !important; font-weight:bold; color:{color_2}; margin-bottom:5px; white-space: nowrap;'>{label_2}</div>", unsafe_allow_html=True)
-
-    # 入力BOXの行（独立しているため絶対に高さがズレない）
-    col_inp1, col_inp2 = st.columns([1.2, 2.8])
-    with col_inp1:
-        def update_target():
-            st.session_state.target_count = st.session_state.target_count_widget
-            
-        st.number_input(
-            "", 
-            min_value=1, 
-            max_value=100, 
-            value=st.session_state.target_count, 
-            key="target_count_widget", 
-            on_change=update_target,
-            disabled=(needs_download or is_working), 
-            label_visibility="collapsed"
-        )
+        st.markdown(f"<p style='font-size:26px; font-weight:bold; color:{color_2}; margin-bottom:5px;'>{label_2}</p>", unsafe_allow_html=True)
         
-    with col_inp2:
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
     if not needs_download:
@@ -534,7 +508,7 @@ if st.session_state.scan_history:
     st.dataframe(df_history, use_container_width=True)
 
 # ====================================================
-# ★ 途中でやり直す（リセット）ボタン
+# ★ 途中でやり直す（リセット）ボタンを1つに統合
 # ====================================================
 st.write("---")
 if st.button("🔄 現在の台車を最初からやり直す", disabled=needs_download, use_container_width=True):
