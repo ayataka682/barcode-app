@@ -382,7 +382,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
             """
             <div style="background-color:#fff3cd; border:5px solid #ffc107; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
                 <p style="margin:0; font-size:48px; font-weight:900; color:#856404;">⚠️ 照合完了（※要確認） ⚠️</p>
-                <p style="margin-top:15px; font-size:28px; color:#856404; font-weight:bold;">作業中にNGが発生しました。表から履歴を確認してください。</p>
+                <p style="margin-top:15px; font-size:28px; color:#856404; font-weight:bold;">作業中に不一致が発生しました。表から履歴を確認してください。</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -393,7 +393,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
         st.markdown(
             """
             <div style="background-color:#d4edda; border:5px solid #28a745; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                <p style="margin:0; font-size:48px; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</p>
+                <p style="margin:0; font-size:48px; font-weight:900; color:#155724;">✨ 照合完了（OK） ✨</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -410,7 +410,7 @@ else:
             <div style="background-color:#ff4b4b; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
                 <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">❌ NG! 不一致</h2>
                 <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></p>
-                <p style="font-size: 28px; margin: 0; font-weight: bold;">もう一度、正しいバーコードを読み込んでください</p>
+                <p style="font-size: 28px; margin: 0; font-weight: bold;">読み込み内容を確認してください</p>
             </div>
             """, unsafe_allow_html=True)
             if st.session_state.play_voice:
@@ -511,7 +511,7 @@ if st.session_state.scan_history:
 # ★ 途中でやり直す（リセット）ボタンを1つに統合
 # ====================================================
 st.write("---")
-if st.button("🔄 現在の台車を最初からやり直す", disabled=needs_download, use_container_width=True):
+if st.button("🔄 最初からやり直す", disabled=needs_download, use_container_width=True):
     reset_cycle()
     st.rerun()
 
@@ -526,7 +526,7 @@ if os.path.exists(master_file):
     csv_master_all = df_master_all.to_csv(index=False).encode('utf-8-sig')
     
     st.download_button(
-        label="📦 【全履歴データ】をすべてダウンロードして消去",
+        label="📦 【履歴データ】をダウンロードして消去",
         data=csv_master_all,
         file_name=f"All_History_Export_{jst_now.strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv",
