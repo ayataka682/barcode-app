@@ -470,7 +470,7 @@ else:
             label_2 = f"🔰 STEP 3：次の照合用バーコードをスキャン（{st.session_state.scanned_count + 1}個目）▼"
             color_2 = "#237804"
             
-        st.markdown(f"<p style='font-size:26px; font-weight:bold; color:{color_2}; margin-bottom:5px;'>{label_2}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:20px; font-weight:bold; color:{color_2}; margin-bottom:5px;'>{label_2}</p>", unsafe_allow_html=True)
         
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
