@@ -412,7 +412,7 @@ if is_working and st.session_state.scanned_count >= st.session_state.target_coun
         st.markdown(
             """
             <div style="background-color:#d4edda; border:5px solid #28a745; padding:40px; border-radius:15px; text-align:center; margin-bottom:30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);">
-                <div style="margin:0; font-size:56px !important; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</div>
+                <div style="margin:0; font-size:108px !important; font-weight:900; color:#155724;">✨ 照合完了（完全一致） ✨</div>
             </div>
             """, unsafe_allow_html=True
         )
