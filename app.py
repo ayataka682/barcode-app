@@ -443,7 +443,7 @@ else:
             label_1 = "🎯 積載個数（作業中ロック）"
             color_1 = "#666666"
 
-        st.markdown(f"<p style='font-size:26px; font-weight:bold; color:{color_1}; margin-bottom:5px;'>{label_1}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:20px; font-weight:bold; color:{color_1}; margin-bottom:5px;'>{label_1}</p>", unsafe_allow_html=True)
         
         def update_target():
             st.session_state.target_count = st.session_state.target_count_widget
