@@ -440,7 +440,7 @@ else:
             label_1 = "🔰 STEP 1：積載個数を確認"
             color_1 = "#0050b3"
         else:
-            label_1 = "🎯 積載個数（作業中ロック）"
+            label_1 = "🎯 積載個数（ロック中）"
             color_1 = "#666666"
 
         st.markdown(f"<p style='font-size:20px; font-weight:bold; color:{color_1}; margin-bottom:5px;'>{label_1}</p>", unsafe_allow_html=True)
