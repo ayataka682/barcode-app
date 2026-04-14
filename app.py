@@ -13,7 +13,7 @@ st.set_page_config(page_title="バーコード照合アプリ", layout="centered
 # ★ CSSで画面幅のバランスと文字サイズを強制最適化
 # ====================================================
 st.markdown("""<style>
-    /* 1. 画面幅の確実な調整（標準の狭い幅を、ちょうどいい1100pxまで広げる） */
+    /* 1. 画面幅の確実な調整（標準の狭い幅を、ちょうどいい1100pxまで広げる */
     .block-container { 
         max-width: 1100px !important; 
         padding-top: 2rem !important; 
