@@ -6,7 +6,7 @@ import time
 import base64
 import os
 
-# レイアウトはwideのまま、CSSで最大幅をコントロールします
+# レイアウトはwideのまま、CSSで最大幅をコントロールしま
 st.set_page_config(page_title="バーコード照合アプリ", layout="centered")
 
 # ====================================================
