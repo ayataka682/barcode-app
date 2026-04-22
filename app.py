@@ -21,7 +21,6 @@ st.markdown("""<style>
     }
     
     /* 2. アプリ全体の標準テキストを約1.5倍（24px）に巨大化 */
-    /* ※ !important を削除し、ご自身でのサイズ変更を優先させるようにしました！ */
     div[data-testid="stMarkdownContainer"] > p {
         font-size: 24px;
     }
@@ -55,7 +54,7 @@ st.markdown("""<style>
     }
 
     /* ================================================= */
-    /* ★ 修正：入力BOXの白と灰色の2色問題を完全に解決！ */
+    /* ★ 入力BOXの白と灰色の2色問題を完全に解決！ */
     /* ================================================= */
     /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
@@ -71,7 +70,7 @@ st.markdown("""<style>
         border: none !important;
     }
 
-    /* ★ バーコード入力欄の文字を強制的に大きく */
+    /* ★ バーコード＆コメント入力欄の文字を強制的に大きく */
     input[type="text"] {
         font-size: 32px !important;
         font-weight: bold !important;
@@ -125,6 +124,8 @@ def clear_session_state():
     st.session_state.play_completion_warning = False
     st.session_state.scan_history = []
     st.session_state.scan_input = ""
+    if "ng_comment_input" in st.session_state:
+        st.session_state.ng_comment_input = ""
 
 def handle_download_1300(target_date_str, df_remaining, master_file, status_file):
     with open(status_file, "w", encoding="utf-8") as f:
@@ -145,6 +146,31 @@ def handle_download_all(master_file):
     if os.path.exists(master_file):
         os.remove(master_file)
     clear_session_state()
+
+# 🌟 新規追加：NGコメントを保存する関数
+def save_ng_comment():
+    comment = st.session_state.get("ng_comment_input", "")
+    if not comment or not st.session_state.scan_history:
+        return
+
+    # セッションの最新履歴を更新（直近がNGの場合のみ）
+    latest_log = st.session_state.scan_history[0]
+    if "NG" in latest_log["判定"]:
+        latest_log["コメント"] = comment
+
+        # CSVファイルの一番下の行（最新行）を書き換え
+        master_file = "scan_master_history.csv"
+        if os.path.exists(master_file):
+            try:
+                df = pd.read_csv(master_file, encoding="utf-8-sig")
+                last_idx = df.index[-1]
+                # 安全確認：グループIDと時刻が一致しているか確認してから上書き
+                if df.at[last_idx, "グループID"] == latest_log["グループID"] and df.at[last_idx, "時刻"] == latest_log["時刻"]:
+                    df.at[last_idx, "コメント"] = comment
+                    df.to_csv(master_file, index=False, encoding="utf-8-sig")
+            except Exception as e:
+                pass
+
 
 # ====================================================
 # ★ 13時締めの時刻計算とダウンロード判定
@@ -240,13 +266,26 @@ def reset_cycle():
     st.session_state.play_voice = False
     st.session_state.cycle_has_ng = False 
     st.session_state.play_completion_warning = False
+    if "ng_comment_input" in st.session_state:
+        st.session_state.ng_comment_input = ""
 
+# 🌟 修正：過去のCSVに「コメント」列が無くてもエラーにならないように結合処理を追加
 def save_to_master_csv(log_entry):
-    df = pd.DataFrame([log_entry])
+    df_new = pd.DataFrame([log_entry])
     if not os.path.exists(master_file):
-        df.to_csv(master_file, index=False, encoding="utf-8-sig")
+        df_new.to_csv(master_file, index=False, encoding="utf-8-sig")
     else:
-        df.to_csv(master_file, mode='a', header=False, index=False, encoding="utf-8-sig")
+        try:
+            df_old = pd.read_csv(master_file, encoding="utf-8-sig")
+            # 既存のCSVと新しいログを結合（旧CSVにコメント列がなくても自動で作成される）
+            df_combined = pd.concat([df_old, df_new], ignore_index=True)
+            if "コメント" not in df_combined.columns:
+                df_combined["コメント"] = ""
+            df_combined["コメント"] = df_combined["コメント"].fillna("")
+            df_combined.to_csv(master_file, index=False, encoding="utf-8-sig")
+        except Exception:
+            # 万が一結合に失敗した場合は追記モードで退避
+            df_new.to_csv(master_file, mode='a', header=False, index=False, encoding="utf-8-sig")
 
 # ====================================================
 # 2. 音声ファイルを読み込んで再生する仕組み
@@ -320,7 +359,8 @@ def process_scan():
             "判定": "⭕ OK", 
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
             "読込内容": f"{scanned_text} ({scanned_mark_name})",
-            "時刻": time_str
+            "時刻": time_str,
+            "コメント": "" # 🌟 追加
         }
         st.session_state.scan_history.insert(0, log_entry)
         save_to_master_csv(log_entry)
@@ -341,7 +381,8 @@ def process_scan():
             "判定": "❌ NG", 
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
             "読込内容": f"{scanned_text} ({scanned_mark_name})",
-            "時刻": time_str
+            "時刻": time_str,
+            "コメント": "" # 🌟 追加
         }
         st.session_state.scan_history.insert(0, log_entry)
         save_to_master_csv(log_entry)
@@ -407,7 +448,7 @@ else:
     if is_working:
         if st.session_state.last_scan_ng:
             st.markdown(f"""
-            <div style="background-color:#ff4b4b; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:25px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
+            <div style="background-color:#ff4b4b; color:white; padding:30px; border-radius:15px; text-align:center; margin-bottom:15px; box-shadow: 0 8px 16px rgba(255,75,75,0.4);">
                 <h2 style="font-size: 80px; margin: 0; font-weight: 900; line-height: 1.2;">❌ NG! 不一致</h2>
                 <p style="font-size: 36px; margin: 15px 0; font-weight: bold;">読込内容: <span style="background-color: white; color: #ff4b4b; padding: 5px 20px; border-radius: 8px;">{st.session_state.ng_text}</span></p>
                 <p style="font-size: 28px; margin: 0; font-weight: bold;">読み込み内容を確認してください</p>
@@ -416,6 +457,14 @@ else:
             if st.session_state.play_voice:
                 play_error_wav_file()
                 st.session_state.play_voice = False
+                
+            # 🌟 新規追加：NGが出た直後だけコメント入力欄を表示
+            st.markdown("<p style='font-size:22px; font-weight:bold; color:#d9363e; margin-bottom:0;'>📝 NGの理由や状況（任意）※入力後Enter</p>", unsafe_allow_html=True)
+            st.text_input("コメント", key="ng_comment_input", on_change=save_ng_comment, placeholder="例：ラベル汚れ、類似品混入 など", label_visibility="collapsed")
+            
+            # コメントが保存されたら「保存しました」という表示を出す
+            if st.session_state.scan_history and st.session_state.scan_history[0].get("コメント"):
+                st.success(f"✅ コメントを保存しました: {st.session_state.scan_history[0]['コメント']}")
                 
         elif st.session_state.last_scan_ok:
             st.markdown(f"""
@@ -475,6 +524,7 @@ else:
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
     if not needs_download:
+        # 🌟 修正：コメント欄とスキャン欄が被った時、確実に「スキャン欄（一番下）」にフォーカスを戻す
         components.html(
             """
             <script>
@@ -483,12 +533,12 @@ else:
                 let attempts = 0;
                 const focusInterval = setInterval(function() {
                     var inputs = doc.querySelectorAll('input[type="text"]');
-                    for (var i = 0; i < inputs.length; i++) {
-                        if (!inputs[i].disabled) {
-                            inputs[i].focus();
-                            clearInterval(focusInterval);
-                            return;
-                        }
+                    // 確実にバーコードスキャンの入力枠（一番最後）を取得する
+                    var targetInput = inputs[inputs.length - 1];
+                    if (targetInput && !targetInput.disabled) {
+                        targetInput.focus();
+                        clearInterval(focusInterval);
+                        return;
                     }
                     attempts++;
                     if (attempts > 20) clearInterval(focusInterval);
