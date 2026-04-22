@@ -48,7 +48,7 @@ st.markdown("""<style>
         line-height: 1.5 !important;
     }
 
-    /* 4. データフレーム（照合履歴の表）の文字を大きく */
+    /* 4. データフレーム/データエディタ（照合履歴の表）の文字を大きく */
     div[data-testid="stDataFrame"] {
         font-size: 20px !important;
     }
@@ -125,6 +125,15 @@ master_data = {
     "0237": "ヘリコプター", "0238": "新幹線", "0239": "家", "0240": "自転車"
 }
 
+# 🌟 プルダウンの選択肢（一元管理）
+ACTION_OPTIONS = [
+    "選択してください", 
+    "該当品を除外（廃棄）して続行", 
+    "正しいラベルに貼り替えて続行", 
+    "責任者へ報告し保留", 
+    "その他"
+]
+
 # ====================================================
 # ★ コールバック関数群
 # ====================================================
@@ -162,7 +171,7 @@ def handle_download_all(master_file):
         os.remove(master_file)
     clear_session_state()
 
-# 🌟 新規追加：プルダウンで選んだ「処置」を保存する関数
+# 新規追加：プルダウンで選んだ「処置」を保存する関数
 def save_ng_action():
     action = st.session_state.get("ng_action_input", "選択してください")
     if action == "選択してください" or not st.session_state.scan_history:
@@ -186,6 +195,32 @@ def save_ng_action():
             except Exception as e:
                 pass
 
+# 🌟 新規追加：データエディタ（履歴表）での直接編集を保存する関数
+def update_history_from_editor():
+    edited_rows = st.session_state.get("history_editor", {}).get("edited_rows", {})
+    if not edited_rows:
+        return
+    
+    master_file = "scan_master_history.csv"
+    
+    for idx, changes in edited_rows.items():
+        if "処置" in changes:
+            new_action = changes["処置"]
+            # セッション上のデータを更新
+            st.session_state.scan_history[idx]["処置"] = new_action
+            
+            # CSVの該当行も更新
+            target_log = st.session_state.scan_history[idx]
+            if os.path.exists(master_file):
+                try:
+                    df = pd.read_csv(master_file, encoding="utf-8-sig")
+                    # グループIDと時刻の両方が一致する行を特定して上書き
+                    match_idx = df[(df["グループID"] == target_log["グループID"]) & (df["時刻"] == target_log["時刻"])].index
+                    if not match_idx.empty:
+                        df.loc[match_idx, "処置"] = new_action
+                        df.to_csv(master_file, index=False, encoding="utf-8-sig")
+                except Exception as e:
+                    pass
 
 # ====================================================
 # ★ 13時締めの時刻計算とダウンロード判定
@@ -284,7 +319,7 @@ def reset_cycle():
     if "ng_action_input" in st.session_state:
         st.session_state.ng_action_input = "選択してください"
 
-# 🌟 修正：過去のCSVに「処置」列が無くてもエラーにならないように結合処理を追加
+# 修正：過去のCSVに「処置」列が無くてもエラーにならないように結合処理を追加
 def save_to_master_csv(log_entry):
     df_new = pd.DataFrame([log_entry])
     if not os.path.exists(master_file):
@@ -375,7 +410,7 @@ def process_scan():
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
             "読込内容": f"{scanned_text} ({scanned_mark_name})",
             "時刻": time_str,
-            "処置": "" # 🌟 コメントから「処置」に変更
+            "処置": "" 
         }
         st.session_state.scan_history.insert(0, log_entry)
         save_to_master_csv(log_entry)
@@ -397,7 +432,7 @@ def process_scan():
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
             "読込内容": f"{scanned_text} ({scanned_mark_name})",
             "時刻": time_str,
-            "処置": "" # 🌟 コメントから「処置」に変更
+            "処置": "" 
         }
         st.session_state.scan_history.insert(0, log_entry)
         save_to_master_csv(log_entry)
@@ -473,27 +508,18 @@ else:
                 play_error_wav_file()
                 st.session_state.play_voice = False
                 
-            # 🌟 新規追加：プルダウン式の処置入力（文字も大きく）
+            # プルダウン式の処置入力
             st.markdown("<p style='font-size:32px; font-weight:bold; color:#d9363e; margin-bottom:15px;'>📝 処置内容を選択してください</p>", unsafe_allow_html=True)
-            
-            # 👇 ここのリストを変更すれば、プルダウンの選択肢を自由に変更できます！
-            action_options = [
-                "選択してください", 
-                "該当品を除外（廃棄）して続行", 
-                "正しいラベルに貼り替えて続行", 
-                "責任者へ報告し保留", 
-                "その他"
-            ]
             
             st.selectbox(
                 "処置", 
-                options=action_options, 
+                options=ACTION_OPTIONS, 
                 key="ng_action_input", 
                 on_change=save_ng_action, 
                 label_visibility="collapsed"
             )
             
-            # 🌟 重なり防止：入力BOXの下に十分な余白を強制的に追加
+            # 重なり防止：入力BOXの下に十分な余白を強制的に追加
             st.markdown("<div style='margin-bottom: 50px;'></div>", unsafe_allow_html=True)
             
             # 処置が保存されたら「保存しました」という表示を出す
@@ -591,9 +617,26 @@ else:
 if st.session_state.scan_history:
     st.write("---")
     st.markdown("<h3>📋 照合履歴（現在のセッション・最新が上）</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:16px; color:#666;'>※ 「処置」の列をクリックすると、表から直接プルダウンで内容を編集できます。</p>", unsafe_allow_html=True)
     
     df_history = pd.DataFrame(st.session_state.scan_history)
-    st.dataframe(df_history, use_container_width=True)
+    
+    # 🌟 修正：表示専用の dataframe を、編集可能な data_editor に変更！
+    st.data_editor(
+        df_history,
+        use_container_width=True,
+        key="history_editor",
+        on_change=update_history_from_editor, # 表が書き換えられたら自動保存関数を呼び出す
+        disabled=["グループID", "目標数", "判定", "参照先", "読込内容", "時刻"], # 「処置」以外は編集できないようにロック
+        column_config={
+            "処置": st.column_config.SelectboxColumn(
+                "処置 (ここをクリックして編集)", 
+                help="処置内容を変更できます",
+                options=ACTION_OPTIONS, # プルダウンの選択肢をセット
+                required=False
+            )
+        }
+    )
 
 # ====================================================
 # ★ 途中でやり直す（リセット）ボタンを1つに統合
