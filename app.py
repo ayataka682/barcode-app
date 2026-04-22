@@ -59,7 +59,7 @@ st.markdown("""<style>
     /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"],
-    div[data-baseweb="select"] {
+    div[data-baseweb="select"] > div {
         background-color: #f0f2f6 !important; 
         border-radius: 10px !important;
         border: none !important;
@@ -71,7 +71,7 @@ st.markdown("""<style>
         border: none !important;
     }
 
-    /* ★ バーコード＆プルダウンの文字を強制的に大きく */
+    /* ★ バーコード入力欄の文字を強制的に大きく */
     input[type="text"] {
         font-size: 32px !important;
         font-weight: bold !important;
@@ -79,6 +79,20 @@ st.markdown("""<style>
         height: 75px !important;
     }
     
+    /* 🌟 新規：プルダウン（セレクトボックス）の文字と高さを強制的に特大化 */
+    div[data-baseweb="select"] > div {
+        min-height: 80px !important;
+        font-size: 32px !important;
+        font-weight: bold !important;
+    }
+    
+    /* 🌟 新規：プルダウンを開いた時のリストの選択肢も特大化 */
+    li[role="option"] {
+        font-size: 28px !important;
+        font-weight: bold !important;
+        padding: 15px 20px !important;
+    }
+
     /* ★ 目標個数（数字入力欄）の文字を強制的に「超特大」にする */
     input[type="number"] {
         font-size: 48px !important;
@@ -91,7 +105,7 @@ st.markdown("""<style>
     /* 目標個数のプラス・マイナスボタンも押しやすく大きくする */
     div[data-baseweb="input"] button {
         width: 3.5rem !important;
-        background-color: #f0f2f6 !important;
+        background-color: #f0f2f6 !important; /* ボタン部分も色を合わせる */
     }
 </style>""", unsafe_allow_html=True)
 
@@ -459,8 +473,8 @@ else:
                 play_error_wav_file()
                 st.session_state.play_voice = False
                 
-            # 🌟 新規追加：プルダウン式の処置入力
-            st.markdown("<p style='font-size:22px; font-weight:bold; color:#d9363e; margin-bottom:5px;'>📝 処置内容を選択してください</p>", unsafe_allow_html=True)
+            # 🌟 新規追加：プルダウン式の処置入力（文字も大きく）
+            st.markdown("<p style='font-size:32px; font-weight:bold; color:#d9363e; margin-bottom:15px;'>📝 処置内容を選択してください</p>", unsafe_allow_html=True)
             
             # 👇 ここのリストを変更すれば、プルダウンの選択肢を自由に変更できます！
             action_options = [
