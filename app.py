@@ -459,8 +459,11 @@ else:
                 st.session_state.play_voice = False
                 
             # 🌟 新規追加：NGが出た直後だけコメント入力欄を表示
-            st.markdown("<p style='font-size:22px; font-weight:bold; color:#d9363e; margin-bottom:0;'>📝 NGの理由や状況（任意）※入力後Enter</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:22px; font-weight:bold; color:#d9363e; margin-bottom:5px;'>📝 NGの理由や状況（任意）※入力後Enter</p>", unsafe_allow_html=True)
             st.text_input("コメント", key="ng_comment_input", on_change=save_ng_comment, placeholder="例：ラベル汚れ、類似品混入 など", label_visibility="collapsed")
+            
+            # 🌟 重なり防止：コメント入力BOXの下に十分な余白を強制的に追加
+            st.markdown("<div style='margin-bottom: 50px;'></div>", unsafe_allow_html=True)
             
             # コメントが保存されたら「保存しました」という表示を出す
             if st.session_state.scan_history and st.session_state.scan_history[0].get("コメント"):
@@ -477,7 +480,9 @@ else:
     # ====================================================
     # ★ 入力エリア ＆ ステップガイドの統合
     # ====================================================
-    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
+    # 🌟 重なり防止：上の要素との間に大きな余白を取って全体を下へ押し下げる
+    st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin:10px 0 30px 0;'>", unsafe_allow_html=True)
     
     col_input1, col_input2 = st.columns([1, 3])
     
