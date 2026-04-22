@@ -58,7 +58,8 @@ st.markdown("""<style>
     /* ================================================= */
     /* 外枠・内枠すべてを強制的に同じ灰色で塗りつぶす */
     div[data-baseweb="input"], 
-    div[data-baseweb="base-input"] {
+    div[data-baseweb="base-input"],
+    div[data-baseweb="select"] {
         background-color: #f0f2f6 !important; 
         border-radius: 10px !important;
         border: none !important;
@@ -70,7 +71,7 @@ st.markdown("""<style>
         border: none !important;
     }
 
-    /* ★ バーコード＆コメント入力欄の文字を強制的に大きく */
+    /* ★ バーコード＆プルダウンの文字を強制的に大きく */
     input[type="text"] {
         font-size: 32px !important;
         font-weight: bold !important;
@@ -90,7 +91,7 @@ st.markdown("""<style>
     /* 目標個数のプラス・マイナスボタンも押しやすく大きくする */
     div[data-baseweb="input"] button {
         width: 3.5rem !important;
-        background-color: #f0f2f6 !important; /* ボタン部分も色を合わせる */
+        background-color: #f0f2f6 !important;
     }
 </style>""", unsafe_allow_html=True)
 
@@ -124,8 +125,8 @@ def clear_session_state():
     st.session_state.play_completion_warning = False
     st.session_state.scan_history = []
     st.session_state.scan_input = ""
-    if "ng_comment_input" in st.session_state:
-        st.session_state.ng_comment_input = ""
+    if "ng_action_input" in st.session_state:
+        st.session_state.ng_action_input = "選択してください"
 
 def handle_download_1300(target_date_str, df_remaining, master_file, status_file):
     with open(status_file, "w", encoding="utf-8") as f:
@@ -147,16 +148,16 @@ def handle_download_all(master_file):
         os.remove(master_file)
     clear_session_state()
 
-# 🌟 新規追加：NGコメントを保存する関数
-def save_ng_comment():
-    comment = st.session_state.get("ng_comment_input", "")
-    if not comment or not st.session_state.scan_history:
+# 🌟 新規追加：プルダウンで選んだ「処置」を保存する関数
+def save_ng_action():
+    action = st.session_state.get("ng_action_input", "選択してください")
+    if action == "選択してください" or not st.session_state.scan_history:
         return
 
     # セッションの最新履歴を更新（直近がNGの場合のみ）
     latest_log = st.session_state.scan_history[0]
     if "NG" in latest_log["判定"]:
-        latest_log["コメント"] = comment
+        latest_log["処置"] = action
 
         # CSVファイルの一番下の行（最新行）を書き換え
         master_file = "scan_master_history.csv"
@@ -166,7 +167,7 @@ def save_ng_comment():
                 last_idx = df.index[-1]
                 # 安全確認：グループIDと時刻が一致しているか確認してから上書き
                 if df.at[last_idx, "グループID"] == latest_log["グループID"] and df.at[last_idx, "時刻"] == latest_log["時刻"]:
-                    df.at[last_idx, "コメント"] = comment
+                    df.at[last_idx, "処置"] = action
                     df.to_csv(master_file, index=False, encoding="utf-8-sig")
             except Exception as e:
                 pass
@@ -266,10 +267,10 @@ def reset_cycle():
     st.session_state.play_voice = False
     st.session_state.cycle_has_ng = False 
     st.session_state.play_completion_warning = False
-    if "ng_comment_input" in st.session_state:
-        st.session_state.ng_comment_input = ""
+    if "ng_action_input" in st.session_state:
+        st.session_state.ng_action_input = "選択してください"
 
-# 🌟 修正：過去のCSVに「コメント」列が無くてもエラーにならないように結合処理を追加
+# 🌟 修正：過去のCSVに「処置」列が無くてもエラーにならないように結合処理を追加
 def save_to_master_csv(log_entry):
     df_new = pd.DataFrame([log_entry])
     if not os.path.exists(master_file):
@@ -277,11 +278,11 @@ def save_to_master_csv(log_entry):
     else:
         try:
             df_old = pd.read_csv(master_file, encoding="utf-8-sig")
-            # 既存のCSVと新しいログを結合（旧CSVにコメント列がなくても自動で作成される）
+            # 既存のCSVと新しいログを結合（旧CSVに処置列がなくても自動で作成される）
             df_combined = pd.concat([df_old, df_new], ignore_index=True)
-            if "コメント" not in df_combined.columns:
-                df_combined["コメント"] = ""
-            df_combined["コメント"] = df_combined["コメント"].fillna("")
+            if "処置" not in df_combined.columns:
+                df_combined["処置"] = ""
+            df_combined["処置"] = df_combined["処置"].fillna("")
             df_combined.to_csv(master_file, index=False, encoding="utf-8-sig")
         except Exception:
             # 万が一結合に失敗した場合は追記モードで退避
@@ -360,7 +361,7 @@ def process_scan():
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
             "読込内容": f"{scanned_text} ({scanned_mark_name})",
             "時刻": time_str,
-            "コメント": "" # 🌟 追加
+            "処置": "" # 🌟 コメントから「処置」に変更
         }
         st.session_state.scan_history.insert(0, log_entry)
         save_to_master_csv(log_entry)
@@ -382,7 +383,7 @@ def process_scan():
             "参照先": f"{st.session_state.reference_code} ({ref_mark_name})",
             "読込内容": f"{scanned_text} ({scanned_mark_name})",
             "時刻": time_str,
-            "コメント": "" # 🌟 追加
+            "処置": "" # 🌟 コメントから「処置」に変更
         }
         st.session_state.scan_history.insert(0, log_entry)
         save_to_master_csv(log_entry)
@@ -458,16 +459,34 @@ else:
                 play_error_wav_file()
                 st.session_state.play_voice = False
                 
-            # 🌟 新規追加：NGが出た直後だけコメント入力欄を表示
-            st.markdown("<p style='font-size:22px; font-weight:bold; color:#d9363e; margin-bottom:5px;'>📝 NGの理由や状況（任意）※入力後Enter</p>", unsafe_allow_html=True)
-            st.text_input("コメント", key="ng_comment_input", on_change=save_ng_comment, placeholder="例：ラベル汚れ、類似品混入 など", label_visibility="collapsed")
+            # 🌟 新規追加：プルダウン式の処置入力
+            st.markdown("<p style='font-size:22px; font-weight:bold; color:#d9363e; margin-bottom:5px;'>📝 処置内容を選択してください</p>", unsafe_allow_html=True)
             
-            # 🌟 重なり防止：コメント入力BOXの下に十分な余白を強制的に追加
+            # 👇 ここのリストを変更すれば、プルダウンの選択肢を自由に変更できます！
+            action_options = [
+                "選択してください", 
+                "該当品を除外（廃棄）して続行", 
+                "正しいラベルに貼り替えて続行", 
+                "責任者へ報告し保留", 
+                "その他"
+            ]
+            
+            st.selectbox(
+                "処置", 
+                options=action_options, 
+                key="ng_action_input", 
+                on_change=save_ng_action, 
+                label_visibility="collapsed"
+            )
+            
+            # 🌟 重なり防止：入力BOXの下に十分な余白を強制的に追加
             st.markdown("<div style='margin-bottom: 50px;'></div>", unsafe_allow_html=True)
             
-            # コメントが保存されたら「保存しました」という表示を出す
-            if st.session_state.scan_history and st.session_state.scan_history[0].get("コメント"):
-                st.success(f"✅ コメントを保存しました: {st.session_state.scan_history[0]['コメント']}")
+            # 処置が保存されたら「保存しました」という表示を出す
+            if st.session_state.scan_history:
+                current_action = st.session_state.scan_history[0].get("処置", "")
+                if current_action and current_action != "選択してください":
+                    st.success(f"✅ 処置を記録しました: {current_action}")
                 
         elif st.session_state.last_scan_ok:
             st.markdown(f"""
@@ -529,7 +548,7 @@ else:
         st.text_input("", key="scan_input", on_change=process_scan, disabled=needs_download, label_visibility="collapsed")
     
     if not needs_download:
-        # 🌟 修正：コメント欄とスキャン欄が被った時、確実に「スキャン欄（一番下）」にフォーカスを戻す
+        # 🌟 修正：常に「バーコードスキャンの枠（一番下）」にフォーカスを戻す
         components.html(
             """
             <script>
