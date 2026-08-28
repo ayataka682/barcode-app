@@ -318,59 +318,61 @@ def reset_cycle():
     st.session_state.play_completion_warning = False
     if "ng_action_input" in st.session_state:
         st.session_state.ng_action_input = "選択してください"
+    
+    # ★追加：ここを入れないとメモリが無限に増え続けます
+    st.session_state.scan_history = [] 
+    st.session_state.scan_input = "" 
 
-# 修正：過去のCSVに「処置」列が無くてもエラーにならないように結合処理を追加
+# ★最適化：過去のCSVに追記するだけに修正（メモリと処理時間を大幅削減）
 def save_to_master_csv(log_entry):
     df_new = pd.DataFrame([log_entry])
     if not os.path.exists(master_file):
         df_new.to_csv(master_file, index=False, encoding="utf-8-sig")
     else:
         try:
-            df_old = pd.read_csv(master_file, encoding="utf-8-sig")
-            # 既存のCSVと新しいログを結合（旧CSVに処置列がなくても自動で作成される）
-            df_combined = pd.concat([df_old, df_new], ignore_index=True)
-            if "処置" not in df_combined.columns:
-                df_combined["処置"] = ""
-            df_combined["処置"] = df_combined["処置"].fillna("")
-            df_combined.to_csv(master_file, index=False, encoding="utf-8-sig")
-        except Exception:
-            # 万が一結合に失敗した場合は追記モードで退避
+            # 読み込まずに「追記モード（mode='a'）」で下に追加するだけにする
             df_new.to_csv(master_file, mode='a', header=False, index=False, encoding="utf-8-sig")
+        except Exception:
+            pass
 
 # ====================================================
-# 2. 音声ファイルを読み込んで再生する仕組み
+# 2. 音声ファイルを読み込んで再生する仕組み（★メモリ最適化版）
 # ====================================================
-def play_error_wav_file():
-    WAV_FILE = "ng_voice.wav.wav"
-    if not os.path.exists(WAV_FILE):
-        st.error(f"音声ファイル {WAV_FILE} が見つかりません。")
-        return
-    with open(WAV_FILE, "rb") as f:
+@st.cache_data
+def get_audio_html(wav_file):
+    """音声ファイルをBase64化する処理をキャッシュ（保存）する"""
+    if not os.path.exists(wav_file):
+        return None
+    with open(wav_file, "rb") as f:
         audio_bytes = f.read()
     encoded_audio = base64.b64encode(audio_bytes).decode()
-    components.html(
-        f"""
-        <audio autoplay="autoplay" style="display:none;" timestamp="{time.time()}">
-            <source src="data:audio/wav;base64,{encoded_audio}" type="audio/wav">
-        </audio>
-        """, height=0
-    )
+    return encoded_audio
+
+def play_error_wav_file():
+    encoded = get_audio_html("ng_voice.wav.wav")
+    if encoded:
+        components.html(
+            f"""
+            <audio autoplay="autoplay" style="display:none;" timestamp="{time.time()}">
+                <source src="data:audio/wav;base64,{encoded}" type="audio/wav">
+            </audio>
+            """, height=0
+        )
+    else:
+        st.error("音声ファイル ng_voice.wav.wav が見つかりません。")
 
 def play_completion_warning_wav_file():
-    WAV_FILE = "warning_voice.wav" 
-    if not os.path.exists(WAV_FILE):
-        st.error(f"音声ファイル {WAV_FILE} が見つかりません。")
-        return
-    with open(WAV_FILE, "rb") as f:
-        audio_bytes = f.read()
-    encoded_audio = base64.b64encode(audio_bytes).decode()
-    components.html(
-        f"""
-        <audio autoplay="autoplay" style="display:none;" timestamp="{time.time()}">
-            <source src="data:audio/wav;base64,{encoded_audio}" type="audio/wav">
-        </audio>
-        """, height=0
-    )
+    encoded = get_audio_html("warning_voice.wav")
+    if encoded:
+        components.html(
+            f"""
+            <audio autoplay="autoplay" style="display:none;" timestamp="{time.time()}">
+                <source src="data:audio/wav;base64,{encoded}" type="audio/wav">
+            </audio>
+            """, height=0
+        )
+    else:
+        st.error("音声ファイル warning_voice.wav が見つかりません。")
 
 # ====================================================
 # 3. 読み込まれた瞬間に動く自動処理
